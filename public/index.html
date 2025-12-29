@@ -1,0 +1,244 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description"
+        content="Free crypto trading portal with automated technical analysis, real-time charts, and market research for beginners">
+    <meta name="keywords" content="crypto trading, bitcoin, ethereum, technical analysis, RSI, MACD, trading signals">
+    <title>Crypto Trading Portal - Free Technical Analysis & Market Research</title>
+    <link rel="stylesheet" href="css/index.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+    <script
+        src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns@3.0.0/dist/chartjs-adapter-date-fns.bundle.min.js"></script>
+</head>
+
+<body>
+    <div class="app-container">
+        <!-- Header -->
+        <header class="header">
+            <div class="header-content">
+                <div class="logo">
+                    <span class="logo-icon">📊</span>
+                    <h1>Crypto Trading Portal</h1>
+                </div>
+                <div class="header-info">
+                    <span class="badge">100% Free</span>
+                    <span class="badge">No API Keys</span>
+                    <span id="lastUpdate" class="last-update">Loading...</span>
+                </div>
+            </div>
+        </header>
+
+        <!-- Main Content -->
+        <div class="main-content">
+            <!-- Sidebar -->
+            <aside class="sidebar">
+                <nav class="nav">
+                    <button class="nav-item active" data-section="dashboard">
+                        <span class="nav-icon">🏠</span>
+                        <span>Dashboard</span>
+                    </button>
+                    <button class="nav-item" data-section="analysis">
+                        <span class="nav-icon">📈</span>
+                        <span>Analysis</span>
+                    </button>
+                    <button class="nav-item" data-section="futures">
+                        <span class="nav-icon">📊</span>
+                        <span>Futures</span>
+                    </button>
+                    <button class="nav-item" data-section="news">
+                        <span class="nav-icon">📰</span>
+                        <span>Market News</span>
+                    </button>
+                    <button class="nav-item" data-section="education">
+                        <span class="nav-icon">📚</span>
+                        <span>Learn</span>
+                    </button>
+                </nav>
+
+                <!-- Crypto List -->
+                <div class="crypto-list-container">
+                    <h3 class="sidebar-title">Cryptocurrencies</h3>
+                    <div id="cryptoList" class="crypto-list">
+                        <div class="loading">Loading cryptocurrencies...</div>
+                    </div>
+                </div>
+            </aside>
+
+            <!-- Content Area -->
+            <main class="content">
+                <!-- Dashboard Section -->
+                <section id="dashboard" class="section active">
+                    <div class="section-header">
+                        <h2>Market Overview</h2>
+                        <p class="section-subtitle">Real-time cryptocurrency prices and 24h changes</p>
+                    </div>
+                    <div id="marketOverview" class="market-grid">
+                        <div class="loading">Loading market data...</div>
+                    </div>
+                </section>
+
+                <!-- Analysis Section -->
+                <section id="analysis" class="section">
+                    <div class="section-header">
+                        <h2>Technical Analysis</h2>
+                        <div class="crypto-selector-container">
+                            <label for="cryptoSelector">Select Cryptocurrency:</label>
+                            <select id="cryptoSelector" class="crypto-selector">
+                                <option value="">Loading...</option>
+                            </select>
+                            <button id="searchCoinBtn" class="search-coin-btn" title="Search for any cryptocurrency">
+                                <span>🔍 Search Coin</span>
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Coin Search Modal -->
+                    <div id="coinSearchModal" class="modal" style="display: none;">
+                        <div class="modal-content">
+                            <div class="modal-header">
+                                <h3>Search Cryptocurrency</h3>
+                                <button class="modal-close" id="closeSearchModal">&times;</button>
+                            </div>
+                            <div class="modal-body">
+                                <input type="text" id="coinSearchInput" class="search-input"
+                                    placeholder="Search by name or symbol (e.g., Dogecoin, DOGE)..." />
+                                <div id="searchResults" class="search-results"></div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div id="analysisContent" class="analysis-content">
+                        <div class="info-message">
+                            <span class="info-icon">ℹ️</span>
+                            <p>Select a cryptocurrency to view detailed technical analysis</p>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- News Section -->
+                <section id="news" class="section">
+                    <div class="section-header">
+                        <h2>Market News & Research</h2>
+                        <div class="news-filter-container">
+                            <label for="newsFilter">Filter by:</label>
+                            <select id="newsFilter" class="news-filter">
+                                <option value="">All Cryptocurrencies</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div id="newsContent" class="news-grid">
+                        <div class="loading">Loading news...</div>
+                    </div>
+                </section>
+
+                <!-- Futures Trading Section -->
+                <section id="futures" class="section">
+                    <div class="section-header">
+                        <h2>Futures Trading Indicators</h2>
+                        <p class="section-subtitle">Advanced metrics for futures/derivatives trading</p>
+                        <div class="crypto-selector-container">
+                            <label for="futuresSelector">Select Cryptocurrency:</label>
+                            <select id="futuresSelector" class="crypto-selector">
+                                <option value="">Select a cryptocurrency...</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div id="futuresContent" class="futures-content">
+                        <div class="info-message">
+                            <span class="info-icon">📊</span>
+                            <p>Select a cryptocurrency to view futures trading indicators</p>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- Education Section -->
+                <section id="education" class="section">
+                    <div class="section-header">
+                        <h2>Trading Education</h2>
+                        <p class="section-subtitle">Learn how to read technical indicators</p>
+                    </div>
+                    <div class="education-content">
+                        <div class="education-card">
+                            <h3>📊 What is RSI (Relative Strength Index)?</h3>
+                            <p><strong>RSI</strong> measures momentum on a scale of 0-100.</p>
+                            <ul>
+                                <li><strong>Above 70:</strong> Overbought - Price may drop soon (consider selling)</li>
+                                <li><strong>Below 30:</strong> Oversold - Price may rise soon (consider buying)</li>
+                                <li><strong>Around 50:</strong> Neutral - No strong signal</li>
+                            </ul>
+                            <p class="tip">💡 <strong>Beginner Tip:</strong> RSI works best in ranging markets. In
+                                strong trends, it can stay overbought/oversold for extended periods.</p>
+                        </div>
+
+                        <div class="education-card">
+                            <h3>📈 What is MACD?</h3>
+                            <p><strong>MACD</strong> (Moving Average Convergence Divergence) shows trend direction and
+                                momentum.</p>
+                            <ul>
+                                <li><strong>MACD above Signal Line:</strong> Bullish (upward momentum)</li>
+                                <li><strong>MACD below Signal Line:</strong> Bearish (downward momentum)</li>
+                                <li><strong>Histogram:</strong> Shows strength of the trend</li>
+                            </ul>
+                            <p class="tip">💡 <strong>Beginner Tip:</strong> Look for crossovers - when MACD crosses
+                                above the signal line, it's a buy signal. When it crosses below, it's a sell signal.</p>
+                        </div>
+
+                        <div class="education-card">
+                            <h3>📉 What are Bollinger Bands?</h3>
+                            <p><strong>Bollinger Bands</strong> show price volatility and potential reversal points.</p>
+                            <ul>
+                                <li><strong>Price at Upper Band:</strong> Overbought - may reverse down</li>
+                                <li><strong>Price at Lower Band:</strong> Oversold - may reverse up</li>
+                                <li><strong>Bands Widening:</strong> High volatility</li>
+                                <li><strong>Bands Narrowing:</strong> Low volatility (breakout coming)</li>
+                            </ul>
+                            <p class="tip">💡 <strong>Beginner Tip:</strong> When bands squeeze together (narrow), a big
+                                price move is often coming. Watch for the breakout direction!</p>
+                        </div>
+
+                        <div class="education-card">
+                            <h3>📊 What are Moving Averages?</h3>
+                            <p><strong>Moving Averages</strong> smooth out price data to identify trends.</p>
+                            <ul>
+                                <li><strong>Price above MA:</strong> Uptrend</li>
+                                <li><strong>Price below MA:</strong> Downtrend</li>
+                                <li><strong>Golden Cross:</strong> Short MA crosses above long MA (bullish)</li>
+                                <li><strong>Death Cross:</strong> Short MA crosses below long MA (bearish)</li>
+                            </ul>
+                            <p class="tip">💡 <strong>Beginner Tip:</strong> The 200-day MA is considered the most
+                                important. Price above it = long-term uptrend.</p>
+                        </div>
+
+                        <div class="education-card">
+                            <h3>🎯 How to Use This Portal</h3>
+                            <ol>
+                                <li><strong>Dashboard:</strong> View all crypto prices at a glance</li>
+                                <li><strong>Analysis:</strong> Select a crypto to see detailed technical indicators and
+                                    trading signals</li>
+                                <li><strong>News:</strong> Read latest market news with sentiment analysis</li>
+                                <li><strong>Signals:</strong> Look for "STRONG BUY" or "STRONG SELL" when multiple
+                                    indicators agree</li>
+                            </ol>
+                            <p class="warning">⚠️ <strong>Important:</strong> This portal provides analysis tools, but
+                                always do your own research. Never invest more than you can afford to lose!</p>
+                        </div>
+                    </div>
+                </section>
+            </main>
+        </div>
+    </div>
+
+    <!-- Scripts -->
+    <script src="js/utils.js"></script>
+    <script src="js/chartManager.js"></script>
+    <script src="js/analysisDisplay.js"></script>
+    <script src="js/newsDisplay.js"></script>
+    <script src="js/coinSearch.js"></script>
+    <script src="js/futuresDisplay.js"></script>
+    <script src="js/app.js"></script>
+</body>
+
+</html>
