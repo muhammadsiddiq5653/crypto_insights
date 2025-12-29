@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 # 📊 Crypto Trading Portal
 
 A **100% FREE** crypto trading portal designed for beginners. Get automated technical analysis, real-time charts, and market research—all without any API keys or paid services!
@@ -187,3 +188,6 @@ This software is for educational and informational purposes only. It does not co
 ## 🎉 Enjoy Trading!
 
 Happy trading! Remember: the best traders are patient, informed, and never risk more than they can afford to lose. 🚀
+=======
+# crypto_insights
+>>>>>>> 2fbd883d4e4c6f60cd6eb2e056a4724b4892bc25
