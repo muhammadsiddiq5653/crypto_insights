@@ -210,3 +210,5 @@ app.listen(config.port, () => {
     console.log(`📊 Tracking ${config.cryptocurrencies.length} cryptocurrencies`);
     console.log(`💰 100% FREE - No API keys required!`);
 });
+
+module.exports = app;
