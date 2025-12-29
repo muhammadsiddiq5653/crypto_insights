@@ -94,7 +94,7 @@ function formatDateTime(date) {
 // API request helper
 async function apiRequest(endpoint) {
     try {
-        const response = await fetch(`http://localhost:3000${endpoint}`);
+        const response = await fetch(endpoint);
         const data = await response.json();
 
         if (!data.success) {
