@@ -95,6 +95,13 @@ function formatDateTime(date) {
 async function apiRequest(endpoint) {
     try {
         const response = await fetch(endpoint);
+
+        // Guard: ensure we got JSON back, not an HTML error page
+        const contentType = response.headers.get('content-type') || '';
+        if (!contentType.includes('application/json')) {
+            throw new Error(`API returned non-JSON response for ${endpoint} (status ${response.status})`);
+        }
+
         const data = await response.json();
 
         if (!data.success) {

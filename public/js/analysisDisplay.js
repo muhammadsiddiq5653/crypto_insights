@@ -5,6 +5,10 @@ async function displayAnalysis(symbol) {
     const container = document.getElementById('analysisContent');
     showLoading(container);
 
+    // Clear previous signal card
+    const signalWrap = document.getElementById('tradeSignalCard');
+    if (signalWrap) signalWrap.innerHTML = '';
+
     try {
         // Fetch analysis data
         const analysis = await apiRequest(`/api/crypto/${symbol}/analysis`);
@@ -15,7 +19,7 @@ async function displayAnalysis(symbol) {
         // Add chart
         html += createChartContainer(symbol);
 
-        // Overall signal card
+        // Overall signal card (existing simple card)
         html += createOverallSignalCard(analysis.overall);
 
         // Individual indicators
@@ -28,6 +32,20 @@ async function displayAnalysis(symbol) {
 
         // Setup timeframe buttons
         setupTimeframeButtons(symbol);
+
+        // Generate enhanced trade signal
+        if (typeof loadAndShowSignal === 'function' && signalWrap) {
+            const cryptos = window._cryptoList || [];
+            const coinData = cryptos.find(c => c.symbol === symbol || c.id === symbol);
+            const coinId   = coinData?.id || symbol.toLowerCase();
+            const coinName = coinData?.name || symbol;
+            const prices   = window._latestPrices || {};
+            const price    = prices[symbol] || coinData?.price || 0;
+            await loadAndShowSignal(coinId, symbol, coinName, price);
+        }
+
+        // Append exchange tab for this coin
+        appendCoinExchangeSection(symbol);
 
     } catch (error) {
         console.error('Error displaying analysis:', error);
@@ -136,4 +154,42 @@ function createExplanationCard(title, content) {
       <p>${escapeHtml(content)}</p>
     </div>
   `;
+}
+
+// Append Exchange tab section below the analysis indicators
+function appendCoinExchangeSection(symbol) {
+    const container = document.getElementById('analysisContent');
+    if (!container) return;
+
+    // Avoid duplicates
+    const existing = container.querySelector('.coa-ex-wrap');
+    if (existing) existing.remove();
+
+    const wrap = document.createElement('div');
+    wrap.className = 'coa-ex-wrap';
+    wrap.innerHTML = `
+    <div class="coa-ex-header">
+      <h4>🏦 Where to Buy ${symbol?.toUpperCase()}</h4>
+      <button class="btn-secondary coa-ex-toggle" onclick="toggleCoinExchangeTab(this, '${symbol}')">Load Exchange Data ↓</button>
+    </div>
+    <div class="coa-ex-body" id="coaExBody_${symbol}" style="display:none"></div>`;
+    container.appendChild(wrap);
+}
+
+function toggleCoinExchangeTab(btn, symbol) {
+    const body = document.getElementById(`coaExBody_${symbol}`);
+    if (!body) return;
+    if (body.style.display === 'none') {
+        body.style.display = 'block';
+        btn.textContent = 'Hide Exchange Data ↑';
+        if (!body.dataset.loaded) {
+            body.dataset.loaded = '1';
+            if (typeof renderCoinAnalysisExchangeTab === 'function') {
+                renderCoinAnalysisExchangeTab(symbol, body);
+            }
+        }
+    } else {
+        body.style.display = 'none';
+        btn.textContent = 'Load Exchange Data ↓';
+    }
 }

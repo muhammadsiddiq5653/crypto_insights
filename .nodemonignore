@@ -1,0 +1,5 @@
+public/
+*.py
+*.sh
+*.md
+node_modules/

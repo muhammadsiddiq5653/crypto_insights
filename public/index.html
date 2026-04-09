@@ -2,243 +2,1610 @@
 <html lang="en">
 
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta name="description"
-        content="Free crypto trading portal with automated technical analysis, real-time charts, and market research for beginners">
-    <meta name="keywords" content="crypto trading, bitcoin, ethereum, technical analysis, RSI, MACD, trading signals">
-    <title>Crypto Trading Portal - Free Technical Analysis & Market Research</title>
-    <link rel="stylesheet" href="css/index.css">
-    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
-    <script
-        src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns@3.0.0/dist/chartjs-adapter-date-fns.bundle.min.js"></script>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="TraderPro - Free multi-asset trading portal for Crypto, PSX, Forex, Stocks with technical analysis, education hub and portfolio tracker">
+  <meta name="keywords" content="crypto trading, PSX, Pakistan Stock Exchange, forex, technical analysis, RSI, MACD, beginner trading guide">
+  <title>TraderPro — Crypto · PSX · Forex · Stocks</title>
+  <link rel="stylesheet" href="css/index.css?v=6">
+  <link rel="manifest" href="/manifest.json">
+  <meta name="theme-color" content="#667eea">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="TraderPro">
+  <link rel="apple-touch-icon" href="/icons/icon-192.png">
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns@3.0.0/dist/chartjs-adapter-date-fns.bundle.min.js"></script>
 </head>
 
 <body>
-    <div class="app-container">
-        <!-- Header -->
-        <header class="header">
-            <div class="header-content">
-                <div class="logo">
-                    <span class="logo-icon">📊</span>
-                    <h1>Crypto Trading Portal</h1>
-                </div>
-                <div class="header-info">
-                    <span class="badge">100% Free</span>
-                    <span class="badge">No API Keys</span>
-                    <span id="lastUpdate" class="last-update">Loading...</span>
-                </div>
-            </div>
-        </header>
+  <div class="app-container">
 
-        <!-- Main Content -->
-        <div class="main-content">
-            <!-- Sidebar -->
-            <aside class="sidebar">
-                <nav class="nav">
-                    <button class="nav-item active" data-section="dashboard">
-                        <span class="nav-icon">🏠</span>
-                        <span>Dashboard</span>
-                    </button>
-                    <button class="nav-item" data-section="analysis">
-                        <span class="nav-icon">📈</span>
-                        <span>Analysis</span>
-                    </button>
-                    <button class="nav-item" data-section="futures">
-                        <span class="nav-icon">📊</span>
-                        <span>Futures</span>
-                    </button>
-                    <button class="nav-item" data-section="news">
-                        <span class="nav-icon">📰</span>
-                        <span>Market News</span>
-                    </button>
-                    <button class="nav-item" data-section="education">
-                        <span class="nav-icon">📚</span>
-                        <span>Learn</span>
-                    </button>
-                </nav>
-
-                <!-- Crypto List -->
-                <div class="crypto-list-container">
-                    <h3 class="sidebar-title">Cryptocurrencies</h3>
-                    <div id="cryptoList" class="crypto-list">
-                        <div class="loading">Loading cryptocurrencies...</div>
-                    </div>
-                </div>
-            </aside>
-
-            <!-- Content Area -->
-            <main class="content">
-                <!-- Dashboard Section -->
-                <section id="dashboard" class="section active">
-                    <div class="section-header">
-                        <h2>Market Overview</h2>
-                        <p class="section-subtitle">Real-time cryptocurrency prices and 24h changes</p>
-                    </div>
-                    <div id="marketOverview" class="market-grid">
-                        <div class="loading">Loading market data...</div>
-                    </div>
-                </section>
-
-                <!-- Analysis Section -->
-                <section id="analysis" class="section">
-                    <div class="section-header">
-                        <h2>Technical Analysis</h2>
-                        <div class="crypto-selector-container">
-                            <label for="cryptoSelector">Select Cryptocurrency:</label>
-                            <select id="cryptoSelector" class="crypto-selector">
-                                <option value="">Loading...</option>
-                            </select>
-                            <button id="searchCoinBtn" class="search-coin-btn" title="Search for any cryptocurrency">
-                                <span>🔍 Search Coin</span>
-                            </button>
-                        </div>
-                    </div>
-
-                    <!-- Coin Search Modal -->
-                    <div id="coinSearchModal" class="modal" style="display: none;">
-                        <div class="modal-content">
-                            <div class="modal-header">
-                                <h3>Search Cryptocurrency</h3>
-                                <button class="modal-close" id="closeSearchModal">&times;</button>
-                            </div>
-                            <div class="modal-body">
-                                <input type="text" id="coinSearchInput" class="search-input"
-                                    placeholder="Search by name or symbol (e.g., Dogecoin, DOGE)..." />
-                                <div id="searchResults" class="search-results"></div>
-                            </div>
-                        </div>
-                    </div>
-
-                    <div id="analysisContent" class="analysis-content">
-                        <div class="info-message">
-                            <span class="info-icon">ℹ️</span>
-                            <p>Select a cryptocurrency to view detailed technical analysis</p>
-                        </div>
-                    </div>
-                </section>
-
-                <!-- News Section -->
-                <section id="news" class="section">
-                    <div class="section-header">
-                        <h2>Market News & Research</h2>
-                        <div class="news-filter-container">
-                            <label for="newsFilter">Filter by:</label>
-                            <select id="newsFilter" class="news-filter">
-                                <option value="">All Cryptocurrencies</option>
-                            </select>
-                        </div>
-                    </div>
-                    <div id="newsContent" class="news-grid">
-                        <div class="loading">Loading news...</div>
-                    </div>
-                </section>
-
-                <!-- Futures Trading Section -->
-                <section id="futures" class="section">
-                    <div class="section-header">
-                        <h2>Futures Trading Indicators</h2>
-                        <p class="section-subtitle">Advanced metrics for futures/derivatives trading</p>
-                        <div class="crypto-selector-container">
-                            <label for="futuresSelector">Select Cryptocurrency:</label>
-                            <select id="futuresSelector" class="crypto-selector">
-                                <option value="">Select a cryptocurrency...</option>
-                            </select>
-                        </div>
-                    </div>
-                    <div id="futuresContent" class="futures-content">
-                        <div class="info-message">
-                            <span class="info-icon">📊</span>
-                            <p>Select a cryptocurrency to view futures trading indicators</p>
-                        </div>
-                    </div>
-                </section>
-
-                <!-- Education Section -->
-                <section id="education" class="section">
-                    <div class="section-header">
-                        <h2>Trading Education</h2>
-                        <p class="section-subtitle">Learn how to read technical indicators</p>
-                    </div>
-                    <div class="education-content">
-                        <div class="education-card">
-                            <h3>📊 What is RSI (Relative Strength Index)?</h3>
-                            <p><strong>RSI</strong> measures momentum on a scale of 0-100.</p>
-                            <ul>
-                                <li><strong>Above 70:</strong> Overbought - Price may drop soon (consider selling)</li>
-                                <li><strong>Below 30:</strong> Oversold - Price may rise soon (consider buying)</li>
-                                <li><strong>Around 50:</strong> Neutral - No strong signal</li>
-                            </ul>
-                            <p class="tip">💡 <strong>Beginner Tip:</strong> RSI works best in ranging markets. In
-                                strong trends, it can stay overbought/oversold for extended periods.</p>
-                        </div>
-
-                        <div class="education-card">
-                            <h3>📈 What is MACD?</h3>
-                            <p><strong>MACD</strong> (Moving Average Convergence Divergence) shows trend direction and
-                                momentum.</p>
-                            <ul>
-                                <li><strong>MACD above Signal Line:</strong> Bullish (upward momentum)</li>
-                                <li><strong>MACD below Signal Line:</strong> Bearish (downward momentum)</li>
-                                <li><strong>Histogram:</strong> Shows strength of the trend</li>
-                            </ul>
-                            <p class="tip">💡 <strong>Beginner Tip:</strong> Look for crossovers - when MACD crosses
-                                above the signal line, it's a buy signal. When it crosses below, it's a sell signal.</p>
-                        </div>
-
-                        <div class="education-card">
-                            <h3>📉 What are Bollinger Bands?</h3>
-                            <p><strong>Bollinger Bands</strong> show price volatility and potential reversal points.</p>
-                            <ul>
-                                <li><strong>Price at Upper Band:</strong> Overbought - may reverse down</li>
-                                <li><strong>Price at Lower Band:</strong> Oversold - may reverse up</li>
-                                <li><strong>Bands Widening:</strong> High volatility</li>
-                                <li><strong>Bands Narrowing:</strong> Low volatility (breakout coming)</li>
-                            </ul>
-                            <p class="tip">💡 <strong>Beginner Tip:</strong> When bands squeeze together (narrow), a big
-                                price move is often coming. Watch for the breakout direction!</p>
-                        </div>
-
-                        <div class="education-card">
-                            <h3>📊 What are Moving Averages?</h3>
-                            <p><strong>Moving Averages</strong> smooth out price data to identify trends.</p>
-                            <ul>
-                                <li><strong>Price above MA:</strong> Uptrend</li>
-                                <li><strong>Price below MA:</strong> Downtrend</li>
-                                <li><strong>Golden Cross:</strong> Short MA crosses above long MA (bullish)</li>
-                                <li><strong>Death Cross:</strong> Short MA crosses below long MA (bearish)</li>
-                            </ul>
-                            <p class="tip">💡 <strong>Beginner Tip:</strong> The 200-day MA is considered the most
-                                important. Price above it = long-term uptrend.</p>
-                        </div>
-
-                        <div class="education-card">
-                            <h3>🎯 How to Use This Portal</h3>
-                            <ol>
-                                <li><strong>Dashboard:</strong> View all crypto prices at a glance</li>
-                                <li><strong>Analysis:</strong> Select a crypto to see detailed technical indicators and
-                                    trading signals</li>
-                                <li><strong>News:</strong> Read latest market news with sentiment analysis</li>
-                                <li><strong>Signals:</strong> Look for "STRONG BUY" or "STRONG SELL" when multiple
-                                    indicators agree</li>
-                            </ol>
-                            <p class="warning">⚠️ <strong>Important:</strong> This portal provides analysis tools, but
-                                always do your own research. Never invest more than you can afford to lose!</p>
-                        </div>
-                    </div>
-                </section>
-            </main>
+    <!-- Header -->
+    <header class="header">
+      <div class="header-content">
+        <div class="logo">
+          <span class="logo-icon">📊</span>
+          <div class="logo-text">
+            <h1>TraderPro</h1>
+            <span class="logo-sub">Crypto · PSX · Forex · Stocks</span>
+          </div>
         </div>
+        <div class="header-center">
+          <!-- Ticker Tape -->
+          <div class="ticker-wrap">
+            <div class="ticker" id="tickerTape">
+              <span class="ticker-loading">Loading market data...</span>
+            </div>
+          </div>
+        </div>
+        <div class="header-right">
+          <button class="header-search-btn" onclick="openUniversalSearch()" title="Search (Ctrl+K)">
+            🔍 <span class="search-hint">Ctrl+K</span>
+          </button>
+          <button class="theme-toggle-btn" id="themeToggleBtn" onclick="toggleTheme()" title="Toggle light/dark theme">☀️</button>
+          <div class="market-status" id="marketStatus">
+            <span class="status-dot active"></span>
+            <span>Live</span>
+          </div>
+          <span class="badge badge-free">100% Free</span>
+          <span id="lastUpdate" class="last-update">--:--</span>
+        </div>
+      </div>
+    </header>
+
+    <!-- Mobile Nav Bar -->
+    <nav class="mobile-nav">
+      <button class="mobile-nav-item active" data-section="dashboard">🏠<span>Home</span></button>
+      <button class="mobile-nav-item" data-section="markets">📈<span>Markets</span></button>
+      <button class="mobile-nav-item" data-section="psx">🇵🇰<span>PSX</span></button>
+      <button class="mobile-nav-item" data-section="portfolio">💼<span>Portfolio</span></button>
+      <button class="mobile-nav-item" data-section="academy">🎓<span>Academy</span></button>
+    </nav>
+
+    <!-- Main Layout -->
+    <div class="main-content">
+
+      <!-- Sidebar -->
+      <aside class="sidebar">
+        <nav class="nav">
+          <!-- Overview -->
+          <div class="nav-group-label">Overview</div>
+          <button class="nav-item active" data-section="dashboard">
+            <span class="nav-icon">🏠</span><span>Dashboard</span>
+          </button>
+          <button class="nav-item" data-section="heatmap">
+            <span class="nav-icon">🔥</span><span>Heatmap</span>
+          </button>
+
+          <!-- Markets -->
+          <div class="nav-group-label">Markets</div>
+          <button class="nav-item" data-section="crypto">
+            <span class="nav-icon">₿</span><span>Crypto</span>
+          </button>
+          <button class="nav-item" data-section="psx">
+            <span class="nav-icon">🇵🇰</span><span>PSX Stocks</span>
+          </button>
+          <button class="nav-item" data-section="forex">
+            <span class="nav-icon">💱</span><span>Forex</span>
+          </button>
+          <button class="nav-item" data-section="markets">
+            <span class="nav-icon">📈</span><span>Technical Analysis</span>
+          </button>
+          <button class="nav-item" data-section="futures">
+            <span class="nav-icon">📊</span><span>Futures Data</span>
+          </button>
+          <button class="nav-item" data-section="global-markets">
+            <span class="nav-icon">🌍</span><span>US &amp; UK Markets</span>
+          </button>
+
+          <!-- AI & Automation -->
+          <div class="nav-group-label">AI &amp; Automation</div>
+          <button class="nav-item" data-section="ml-predict">
+            <span class="nav-icon">🤖</span><span>ML Prediction</span><span class="nav-badge-new">NEW</span>
+          </button>
+          <button class="nav-item" data-section="autotrade">
+            <span class="nav-icon">⚡</span><span>AutoTrade Engine</span><span class="nav-badge-new">NEW</span>
+          </button>
+          <button class="nav-item" data-section="ai-trading">
+            <span class="nav-icon">🧠</span><span>AI Assistant</span><span class="nav-badge-new">NEW</span>
+          </button>
+          <button class="nav-item" data-section="ai-coach">
+            <span class="nav-icon">🎯</span><span>AI Coach</span>
+          </button>
+
+          <!-- Analytics -->
+          <div class="nav-group-label">Analytics</div>
+          <button class="nav-item" data-section="onchain-analytics">
+            <span class="nav-icon">🔗</span><span>On-Chain Analytics</span><span class="nav-badge-new">NEW</span>
+          </button>
+          <button class="nav-item" data-section="order-book-heatmap">
+            <span class="nav-icon">📗</span><span>Order Book Heatmap</span><span class="nav-badge-new">NEW</span>
+          </button>
+          <button class="nav-item" data-section="arbitrage-scanner">
+            <span class="nav-icon">⚡</span><span>Arbitrage Scanner</span><span class="nav-badge-new">NEW</span>
+          </button>
+          <button class="nav-item" data-section="liquidation-heatmap">
+            <span class="nav-icon">💥</span><span>Liquidation Heatmap</span><span class="nav-badge-new">NEW</span>
+          </button>
+          <button class="nav-item" data-section="market-scanner">
+            <span class="nav-icon">📡</span><span>Market Scanner</span><span class="nav-badge-new">NEW</span>
+          </button>
+          <button class="nav-item" data-section="algo-strategies">
+            <span class="nav-icon">⚙️</span><span>Algo Strategies</span><span class="nav-badge-new">NEW</span>
+          </button>
+          <button class="nav-item" data-section="strategy-builder">
+            <span class="nav-icon">🔧</span><span>Strategy Builder</span><span class="nav-badge-new">NEW</span>
+          </button>
+          <button class="nav-item" data-section="futures-scanner">
+            <span class="nav-icon">🔭</span><span>Futures Scanner</span><span class="nav-badge-new">NEW</span>
+          </button>
+          <button class="nav-item" data-section="news-signals">
+            <span class="nav-icon">📰</span><span>News Signals</span><span class="nav-badge-new">NEW</span>
+          </button>
+          <button class="nav-item" data-section="dca-calculator">
+            <span class="nav-icon">📅</span><span>DCA Simulator</span><span class="nav-badge-new">NEW</span>
+          </button>
+          <button class="nav-item" data-section="trade-ideas">
+            <span class="nav-icon">💡</span><span>Trade Ideas</span>
+          </button>
+          <button class="nav-item" data-section="screener">
+            <span class="nav-icon">🔍</span><span>Crypto Screener</span>
+          </button>
+          <button class="nav-item" data-section="backtest">
+            <span class="nav-icon">⏱️</span><span>Backtesting</span>
+          </button>
+          <button class="nav-item" data-section="mtf">
+            <span class="nav-icon">📊</span><span>Multi-Timeframe</span>
+          </button>
+          <button class="nav-item" data-section="correlation">
+            <span class="nav-icon">🔗</span><span>Correlation</span>
+          </button>
+
+          <!-- Tools -->
+          <div class="nav-group-label">Tools</div>
+          <button class="nav-item" data-section="watchlist">
+            <span class="nav-icon">⭐</span><span>Watchlist</span><span id="watchlistCount" class="nav-badge" style="display:none"></span>
+          </button>
+          <button class="nav-item" data-section="portfolio">
+            <span class="nav-icon">💼</span><span>Portfolio Tracker</span>
+          </button>
+          <button class="nav-item" data-section="papertrading">
+            <span class="nav-icon">🎮</span><span>Paper Trading</span>
+          </button>
+          <button class="nav-item" data-section="journal">
+            <span class="nav-icon">📓</span><span>Trade Journal</span>
+          </button>
+          <button class="nav-item" data-section="alerts">
+            <span class="nav-icon">🔔</span><span>Price Alerts</span>
+          </button>
+          <button class="nav-item" data-section="smart-alerts">
+            <span class="nav-icon">⚡</span><span>Smart Alerts</span>
+          </button>
+          <button class="nav-item" data-section="calculator">
+            <span class="nav-icon">🧮</span><span>Risk Calculator</span>
+          </button>
+          <button class="nav-item" data-section="converter">
+            <span class="nav-icon">🔄</span><span>Converter</span>
+          </button>
+          <button class="nav-item" data-section="calendar">
+            <span class="nav-icon">📅</span><span>Economic Calendar</span>
+          </button>
+          <button class="nav-item" data-section="sentiment">
+            <span class="nav-icon">🌡️</span><span>Sentiment</span>
+          </button>
+          <button class="nav-item" data-section="portfolio-analytics">
+            <span class="nav-icon">📈</span><span>Port. Analytics</span>
+          </button>
+          <button class="nav-item" data-section="signal-history">
+            <span class="nav-icon">📊</span><span>Signal History</span>
+          </button>
+          <button class="nav-item" data-section="tax-calc">
+            <span class="nav-icon">🧾</span><span>Tax Calculator</span>
+          </button>
+          <button class="nav-item" data-section="payoff">
+            <span class="nav-icon">📉</span><span>Payoff Chart</span>
+          </button>
+          <button class="nav-item" data-section="export-center">
+            <span class="nav-icon">📤</span><span>Export Center</span>
+          </button>
+          <button class="nav-item" data-section="exchanges">
+            <span class="nav-icon">🏦</span><span>Exchanges</span>
+          </button>
+
+          <!-- Learn -->
+          <div class="nav-group-label">Learn</div>
+          <button class="nav-item" data-section="academy">
+            <span class="nav-icon">🎓</span><span>Trading Academy</span>
+          </button>
+          <button class="nav-item" data-section="glossary">
+            <span class="nav-icon">📖</span><span>Glossary</span>
+          </button>
+          <button class="nav-item" data-section="news">
+            <span class="nav-icon">📰</span><span>Market News</span>
+          </button>
+        </nav>
+
+        <!-- Fear & Greed Widget -->
+        <div class="sidebar-widget" id="fearGreedWidget">
+          <div class="widget-title">Fear & Greed Index</div>
+          <div class="fear-greed-display">
+            <div class="fear-greed-dial" id="fearGreedDial">
+              <svg viewBox="0 0 200 120" class="gauge-svg">
+                <defs>
+                  <linearGradient id="gaugeGrad" x1="0%" y1="0%" x2="100%" y2="0%">
+                    <stop offset="0%" style="stop-color:#ee0979"/>
+                    <stop offset="25%" style="stop-color:#ff6a00"/>
+                    <stop offset="50%" style="stop-color:#f5a623"/>
+                    <stop offset="75%" style="stop-color:#7ed321"/>
+                    <stop offset="100%" style="stop-color:#38ef7d"/>
+                  </linearGradient>
+                </defs>
+                <path d="M 20 100 A 80 80 0 0 1 180 100" fill="none" stroke="url(#gaugeGrad)" stroke-width="12" stroke-linecap="round"/>
+                <path d="M 20 100 A 80 80 0 0 1 180 100" fill="none" stroke="rgba(255,255,255,0.05)" stroke-width="14" stroke-linecap="round"/>
+                <line id="gaugeNeedle" x1="100" y1="100" x2="100" y2="30" stroke="#fff" stroke-width="2.5" stroke-linecap="round" transform="rotate(-90, 100, 100)"/>
+                <circle cx="100" cy="100" r="5" fill="#fff"/>
+              </svg>
+            </div>
+            <div class="fear-greed-value" id="fearGreedValue">--</div>
+            <div class="fear-greed-label" id="fearGreedLabel">Loading...</div>
+          </div>
+        </div>
+
+        <!-- Top Movers Widget -->
+        <div class="sidebar-widget">
+          <div class="widget-title">Top Movers (24h)</div>
+          <div id="topMovers" class="top-movers">
+            <div class="loading-mini">Loading...</div>
+          </div>
+        </div>
+      </aside>
+
+      <!-- Content Area -->
+      <main class="content">
+
+        <!-- ======= DASHBOARD ======= -->
+        <section id="dashboard" class="section active">
+
+          <!-- ══ JOURNEY HERO ══ -->
+          <div class="journey-hero">
+            <div class="journey-hero-text">
+              <h1 class="journey-title">Your Trading Journey Starts Here</h1>
+              <p class="journey-subtitle">One platform. All markets. Complete education. From your first trade to building a system.</p>
+              <div class="journey-progress-bar">
+                <div class="jp-step active" onclick="switchSection('academy')">
+                  <div class="jp-step-icon">🎓</div>
+                  <div class="jp-step-label">1. Learn</div>
+                </div>
+                <div class="jp-connector"></div>
+                <div class="jp-step" onclick="switchSection('papertrading')">
+                  <div class="jp-step-icon">🎮</div>
+                  <div class="jp-step-label">2. Practice</div>
+                </div>
+                <div class="jp-connector"></div>
+                <div class="jp-step" onclick="switchSection('markets')">
+                  <div class="jp-step-icon">📈</div>
+                  <div class="jp-step-label">3. Analyse</div>
+                </div>
+                <div class="jp-connector"></div>
+                <div class="jp-step" onclick="switchSection('screener')">
+                  <div class="jp-step-icon">🔍</div>
+                  <div class="jp-step-label">4. Screen</div>
+                </div>
+                <div class="jp-connector"></div>
+                <div class="jp-step" onclick="switchSection('journal')">
+                  <div class="jp-step-icon">📓</div>
+                  <div class="jp-step-label">5. Track</div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- ══ LIVE MARKET PULSE ══ -->
+          <div class="dashboard-section-label">📡 Live Market Pulse</div>
+          <div class="summary-tiles" id="summaryTiles">
+            <div class="summary-tile" onclick="switchSection('crypto')">
+              <div class="tile-icon">₿</div>
+              <div class="tile-info">
+                <div class="tile-label">Bitcoin</div>
+                <div class="tile-value" id="btcPrice">--</div>
+                <div class="tile-change" id="btcChange">--</div>
+              </div>
+            </div>
+            <div class="summary-tile" onclick="switchSection('crypto')">
+              <div class="tile-icon">Ξ</div>
+              <div class="tile-info">
+                <div class="tile-label">Ethereum</div>
+                <div class="tile-value" id="ethPrice">--</div>
+                <div class="tile-change" id="ethChange">--</div>
+              </div>
+            </div>
+            <div class="summary-tile" onclick="switchSection('psx')">
+              <div class="tile-icon">🇵🇰</div>
+              <div class="tile-info">
+                <div class="tile-label">KSE-100</div>
+                <div class="tile-value" id="kse100Value">--</div>
+                <div class="tile-change" id="kse100Change">PSX</div>
+              </div>
+            </div>
+            <div class="summary-tile" onclick="switchSection('global-markets')">
+              <div class="tile-icon">🇺🇸</div>
+              <div class="tile-info">
+                <div class="tile-label">S&amp;P 500</div>
+                <div class="tile-value" id="sp500Value">--</div>
+                <div class="tile-change" id="sp500Change">US Market</div>
+              </div>
+            </div>
+            <div class="summary-tile" onclick="switchSection('global-markets')">
+              <div class="tile-icon">🇬🇧</div>
+              <div class="tile-info">
+                <div class="tile-label">FTSE 100</div>
+                <div class="tile-value" id="ftse100Value">--</div>
+                <div class="tile-change" id="ftse100Change">UK Market</div>
+              </div>
+            </div>
+            <div class="summary-tile" onclick="switchSection('forex')">
+              <div class="tile-icon">💵</div>
+              <div class="tile-info">
+                <div class="tile-label">USD/PKR</div>
+                <div class="tile-value" id="usdpkrRate">--</div>
+                <div class="tile-change" id="usdpkrChange">Forex</div>
+              </div>
+            </div>
+            <div class="summary-tile">
+              <div class="tile-icon">🥇</div>
+              <div class="tile-info">
+                <div class="tile-label">Gold (XAU)</div>
+                <div class="tile-value" id="goldPrice">--</div>
+                <div class="tile-change" id="goldChange">per oz</div>
+              </div>
+            </div>
+            <div class="summary-tile">
+              <div class="tile-icon">🛢️</div>
+              <div class="tile-info">
+                <div class="tile-label">Crude Oil</div>
+                <div class="tile-value" id="oilPrice">--</div>
+                <div class="tile-change" id="oilChange">WTI</div>
+              </div>
+            </div>
+          </div>
+
+          <!-- ══ QUICK ACCESS CARDS ══ -->
+          <div class="dashboard-section-label">⚡ Quick Access by Market</div>
+          <div class="market-access-grid">
+            <div class="market-access-card crypto-card" onclick="switchSection('crypto')">
+              <div class="mac-header">
+                <span class="mac-flag">₿</span>
+                <div>
+                  <div class="mac-title">Crypto Markets</div>
+                  <div class="mac-sub">24 coins · Live prices</div>
+                </div>
+              </div>
+              <div class="mac-stats" id="dashCryptoStats">
+                <span class="mac-stat" id="dashCryptoBuy">—</span>
+                <span class="mac-stat-label">Buy signals</span>
+              </div>
+              <div class="mac-links">
+                <span onclick="event.stopPropagation(); switchSection('crypto')">Prices</span>
+                <span onclick="event.stopPropagation(); switchSection('markets')">Analyse</span>
+                <span onclick="event.stopPropagation(); switchSection('screener')">Screener</span>
+                <span onclick="event.stopPropagation(); switchSection('futures')">Futures</span>
+              </div>
+            </div>
+            <div class="market-access-card psx-card" onclick="switchSection('psx')">
+              <div class="mac-header">
+                <span class="mac-flag">🇵🇰</span>
+                <div>
+                  <div class="mac-title">PSX — Pakistan</div>
+                  <div class="mac-sub">KSE-100 · 18 stocks</div>
+                </div>
+              </div>
+              <div class="mac-stats">
+                <span class="mac-stat" id="dashKSE">—</span>
+                <span class="mac-stat-label">KSE-100</span>
+              </div>
+              <div class="mac-links">
+                <span onclick="event.stopPropagation(); switchSection('psx')">Stocks</span>
+                <span onclick="event.stopPropagation(); switchSection('academy'); setTimeout(()=>setAcademyTrack('psx-learn'),300)">PSX Guide</span>
+              </div>
+            </div>
+            <div class="market-access-card us-card" onclick="switchSection('global-markets')">
+              <div class="mac-header">
+                <span class="mac-flag">🇺🇸</span>
+                <div>
+                  <div class="mac-title">US Markets</div>
+                  <div class="mac-sub">S&amp;P 500 · NASDAQ · 20 stocks</div>
+                </div>
+              </div>
+              <div class="mac-stats">
+                <span class="mac-stat" id="dashSP500">—</span>
+                <span class="mac-stat-label">S&amp;P 500</span>
+              </div>
+              <div class="mac-links">
+                <span onclick="event.stopPropagation(); switchSection('global-markets')">Stocks</span>
+                <span onclick="event.stopPropagation(); switchSection('global-markets')">Indices</span>
+              </div>
+            </div>
+            <div class="market-access-card uk-card" onclick="switchSection('global-markets')">
+              <div class="mac-header">
+                <span class="mac-flag">🇬🇧</span>
+                <div>
+                  <div class="mac-title">UK Markets</div>
+                  <div class="mac-sub">FTSE 100 · 15 stocks</div>
+                </div>
+              </div>
+              <div class="mac-stats">
+                <span class="mac-stat" id="dashFTSE">—</span>
+                <span class="mac-stat-label">FTSE 100</span>
+              </div>
+              <div class="mac-links">
+                <span onclick="event.stopPropagation(); switchSection('global-markets')">Stocks</span>
+                <span onclick="event.stopPropagation(); switchSection('global-markets')">Screener</span>
+              </div>
+            </div>
+            <div class="market-access-card forex-card" onclick="switchSection('forex')">
+              <div class="mac-header">
+                <span class="mac-flag">💱</span>
+                <div>
+                  <div class="mac-title">Forex &amp; PKR</div>
+                  <div class="mac-sub">12 pairs · USD/PKR</div>
+                </div>
+              </div>
+              <div class="mac-stats">
+                <span class="mac-stat" id="dashUSDPKR">—</span>
+                <span class="mac-stat-label">USD/PKR</span>
+              </div>
+              <div class="mac-links">
+                <span onclick="event.stopPropagation(); switchSection('forex')">Rates</span>
+                <span onclick="event.stopPropagation(); switchSection('converter')">Convert</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- ══ BEGINNER START HERE ══ -->
+          <div class="dashboard-section-label">🚀 Start Here — Your Path</div>
+          <div class="beginner-path-grid">
+            <div class="bpg-card" onclick="switchSection('academy')">
+              <div class="bpg-num">01</div>
+              <div class="bpg-icon">🎓</div>
+              <div class="bpg-title">Learn the Basics</div>
+              <div class="bpg-desc">What is trading? How do stocks, crypto & forex work? Start with Lesson 1 — no experience needed.</div>
+              <div class="bpg-cta">Start Learning →</div>
+            </div>
+            <div class="bpg-card" onclick="switchSection('academy'); setTimeout(()=>setAcademyTrack('technical'),300)">
+              <div class="bpg-num">02</div>
+              <div class="bpg-icon">📊</div>
+              <div class="bpg-title">Learn to Read Charts</div>
+              <div class="bpg-desc">Candlesticks, RSI, MACD, support &amp; resistance. See real live charts as you learn.</div>
+              <div class="bpg-cta">Open Chart Lessons →</div>
+            </div>
+            <div class="bpg-card" onclick="switchSection('papertrading')">
+              <div class="bpg-num">03</div>
+              <div class="bpg-icon">🎮</div>
+              <div class="bpg-title">Practice Risk-Free</div>
+              <div class="bpg-desc">Trade with $10,000 virtual money. Make mistakes here, not with real money. Build confidence first.</div>
+              <div class="bpg-cta">Open Paper Trading →</div>
+            </div>
+            <div class="bpg-card" onclick="switchSection('screener')">
+              <div class="bpg-num">04</div>
+              <div class="bpg-icon">🔍</div>
+              <div class="bpg-title">Find Opportunities</div>
+              <div class="bpg-desc">Use the Screener to scan for coins with RSI oversold, buy signals, or volume spikes.</div>
+              <div class="bpg-cta">Open Screener →</div>
+            </div>
+            <div class="bpg-card" onclick="switchSection('markets')">
+              <div class="bpg-num">05</div>
+              <div class="bpg-icon">📈</div>
+              <div class="bpg-title">Analyse &amp; Get Signals</div>
+              <div class="bpg-desc">Select any coin. Get Entry, Stop Loss, and Take Profit levels based on technical analysis.</div>
+              <div class="bpg-cta">Open Analysis →</div>
+            </div>
+            <div class="bpg-card" onclick="switchSection('journal')">
+              <div class="bpg-num">06</div>
+              <div class="bpg-icon">📓</div>
+              <div class="bpg-title">Track Your Trades</div>
+              <div class="bpg-desc">Log every trade. Track win rate, best strategies, emotions, and lessons learned. Improve over time.</div>
+              <div class="bpg-cta">Open Trade Journal →</div>
+            </div>
+          </div>
+
+          <!-- ══ LIVE CRYPTO MINI-GRID ══ -->
+          <div class="sub-section-title">
+            <span>🔥 Crypto Prices</span>
+            <button class="btn-small" onclick="switchSection('crypto')">View All →</button>
+          </div>
+          <div id="marketOverview" class="market-grid">
+            <div class="loading">Loading market data...</div>
+          </div>
+
+        </section>
+
+        <!-- ======= HEATMAP ======= -->
+        <section id="heatmap" class="section">
+          <div class="section-header">
+            <h2>Market Heatmap</h2>
+            <p class="section-subtitle">Visual overview of market performance — size = market cap, color = 24h change</p>
+          </div>
+          <div class="heatmap-legend">
+            <span class="hm-leg red">▼ Strong Loss</span>
+            <span class="hm-leg orange">▼ Loss</span>
+            <span class="hm-leg neutral">Flat</span>
+            <span class="hm-leg green-light">▲ Gain</span>
+            <span class="hm-leg green">▲ Strong Gain</span>
+          </div>
+          <div id="heatmapGrid" class="heatmap-grid">
+            <div class="loading">Loading heatmap...</div>
+          </div>
+        </section>
+
+        <!-- ======= CRYPTO ======= -->
+        <section id="crypto" class="section">
+          <div class="section-header">
+            <h2>Cryptocurrency Market</h2>
+            <div class="section-controls">
+              <input type="text" id="cryptoSearchInput" class="search-bar" placeholder="🔍 Search coins...">
+            </div>
+          </div>
+          <div id="cryptoFullTable" class="full-table-wrap">
+            <div class="loading">Loading cryptocurrencies...</div>
+          </div>
+        </section>
+
+        <!-- ======= PSX ======= -->
+        <section id="psx" class="section">
+          <div class="section-header">
+            <h2>🇵🇰 Pakistan Stock Exchange (PSX)</h2>
+            <p class="section-subtitle">KSE-100 Index · Top Stocks · Sector Performance</p>
+          </div>
+
+          <!-- PSX Info Banner -->
+          <div class="info-banner">
+            <span class="info-icon">ℹ️</span>
+            <div>
+              <strong>PSX Trading Hours:</strong> Monday–Friday, 9:15 AM – 3:30 PM PKT &nbsp;|&nbsp;
+              <strong>Settlement:</strong> T+2 &nbsp;|&nbsp;
+              <strong>Regulator:</strong> SECP &nbsp;|&nbsp;
+              <a href="https://dps.psx.com.pk" target="_blank" rel="noopener" class="link-out">PSX Official ↗</a>
+            </div>
+          </div>
+
+          <!-- KSE-100 Stats -->
+          <div class="psx-stats-grid" id="psxStats">
+            <div class="psx-stat-card">
+              <div class="psx-stat-label">KSE-100 Index</div>
+              <div class="psx-stat-value" id="psxKSE100">Loading...</div>
+            </div>
+            <div class="psx-stat-card">
+              <div class="psx-stat-label">KSE-30 Index</div>
+              <div class="psx-stat-value" id="psxKSE30">Loading...</div>
+            </div>
+            <div class="psx-stat-card">
+              <div class="psx-stat-label">KMI-30 Index</div>
+              <div class="psx-stat-value" id="psxKMI30">Loading...</div>
+            </div>
+            <div class="psx-stat-card">
+              <div class="psx-stat-label">Market Volume</div>
+              <div class="psx-stat-value" id="psxVolume">--</div>
+            </div>
+          </div>
+
+          <!-- PSX fallback note -->
+          <div class="psx-fallback-note" id="psxFallbackNote" style="display:none">
+            <span>⚠️ Showing indicative data.</span>
+            <a href="https://dps.psx.com.pk" target="_blank" rel="noopener">View real-time data on dps.psx.com.pk ↗</a>
+          </div>
+
+          <!-- PSX Sectors -->
+          <div class="sub-section-title">Sector Performance</div>
+          <div class="psx-sectors" id="psxSectors">
+            <div class="loading">Loading sector data...</div>
+          </div>
+
+          <!-- How to Trade PSX Guide -->
+          <div class="sub-section-title">How to Start Trading on PSX</div>
+          <div class="psx-guide">
+            <div class="guide-step">
+              <div class="step-num">1</div>
+              <div class="step-content">
+                <h4>Get a National Identity Card (NIC)</h4>
+                <p>You need a valid Pakistani NIC or NICOP (for overseas Pakistanis). This is the base requirement for all investment accounts in Pakistan.</p>
+              </div>
+            </div>
+            <div class="guide-step">
+              <div class="step-num">2</div>
+              <div class="step-content">
+                <h4>Open a CDC Account (Investor Account)</h4>
+                <p>Register with the <strong>Central Depository Company (CDC)</strong> via any NCCPL member broker. Your shares are held here electronically. Go to <a href="https://www.cdcpakistan.com" target="_blank" rel="noopener" class="link-out">cdcpakistan.com ↗</a> to learn more.</p>
+              </div>
+            </div>
+            <div class="guide-step">
+              <div class="step-num">3</div>
+              <div class="step-content">
+                <h4>Choose a Licensed Broker</h4>
+                <p>Select a SECP-licensed broker. Popular choices include:</p>
+                <div class="broker-chips">
+                  <span class="broker-chip">JS Securities</span>
+                  <span class="broker-chip">Arif Habib Ltd</span>
+                  <span class="broker-chip">AKD Securities</span>
+                  <span class="broker-chip">IGI Securities</span>
+                  <span class="broker-chip">Topline Securities</span>
+                  <span class="broker-chip">Foundation Securities</span>
+                </div>
+              </div>
+            </div>
+            <div class="guide-step">
+              <div class="step-num">4</div>
+              <div class="step-content">
+                <h4>Fund Your Trading Account</h4>
+                <p>Transfer funds via online banking to your broker's account. Minimum capital varies by broker — most allow starting with as low as PKR 10,000–25,000.</p>
+              </div>
+            </div>
+            <div class="guide-step">
+              <div class="step-num">5</div>
+              <div class="step-content">
+                <h4>Place Your First Order</h4>
+                <p>Log into your broker's platform or app. Search a stock by its symbol (e.g., ENGRO, LUCK, HBL). Enter quantity and price, then submit. Orders execute during market hours (9:15 AM – 3:30 PM PKT).</p>
+              </div>
+            </div>
+            <div class="guide-step">
+              <div class="step-num">6</div>
+              <div class="step-content">
+                <h4>Settlement (T+2)</h4>
+                <p>PSX uses T+2 settlement — your shares and funds settle <strong>2 business days</strong> after the trade. Until then, the transaction is pending. Always keep sufficient margin in your account.</p>
+              </div>
+            </div>
+          </div>
+
+          <!-- Top PSX Stocks Reference Table -->
+          <div class="sub-section-title">Key PSX Blue-Chip Stocks</div>
+          <div class="psx-stocks-table-wrap">
+            <table class="psx-table" id="psxTopStocks">
+              <thead>
+                <tr>
+                  <th>Symbol</th>
+                  <th>Company</th>
+                  <th>Sector</th>
+                  <th>Notes</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr><td>ENGRO</td><td>Engro Corporation</td><td>Conglomerate</td><td>Diversified energy, food, chemicals</td></tr>
+                <tr><td>HBL</td><td>Habib Bank Ltd</td><td>Banking</td><td>Largest bank by assets</td></tr>
+                <tr><td>MCB</td><td>MCB Bank Ltd</td><td>Banking</td><td>Consistent dividend payer</td></tr>
+                <tr><td>LUCK</td><td>Lucky Cement</td><td>Cement</td><td>Largest cement producer</td></tr>
+                <tr><td>PSO</td><td>Pakistan State Oil</td><td>Oil & Gas</td><td>Largest OMC in Pakistan</td></tr>
+                <tr><td>OGDC</td><td>Oil & Gas Dev Co</td><td>Oil & Gas</td><td>State-owned E&P company</td></tr>
+                <tr><td>FFC</td><td>Fauji Fertilizer Co</td><td>Fertilizer</td><td>Leading fertilizer producer</td></tr>
+                <tr><td>HUBC</td><td>Hub Power Company</td><td>Power</td><td>Leading independent power producer</td></tr>
+                <tr><td>TRG</td><td>TRG Pakistan</td><td>Technology</td><td>Tech/BPO conglomerate</td></tr>
+                <tr><td>SYS</td><td>Systems Limited</td><td>IT Services</td><td>Top IT company, exports-driven</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </section>
+
+        <!-- ======= FOREX ======= -->
+        <section id="forex" class="section">
+          <div class="section-header">
+            <h2>Forex — Currency Exchange</h2>
+            <p class="section-subtitle">Live exchange rates · Major, Minor & PKR pairs</p>
+          </div>
+          <div class="forex-grid" id="forexGrid">
+            <div class="loading">Loading forex rates...</div>
+          </div>
+
+          <div class="sub-section-title">What is Forex Trading?</div>
+          <div class="forex-explainer">
+            <div class="explainer-card">
+              <h4>🌍 The World's Largest Market</h4>
+              <p>The foreign exchange (forex) market trades over <strong>$7 trillion per day</strong> — dwarfing all stock markets combined. It operates 24 hours a day, 5 days a week across global financial centres.</p>
+            </div>
+            <div class="explainer-card">
+              <h4>📊 How Currency Pairs Work</h4>
+              <p>Currencies are quoted in pairs like <strong>EUR/USD = 1.08</strong>, meaning 1 Euro buys 1.08 US Dollars. The first currency is the "base" and the second is the "quote." You profit when the exchange rate moves in your predicted direction.</p>
+            </div>
+            <div class="explainer-card">
+              <h4>💡 Major, Minor & Exotic Pairs</h4>
+              <p><strong>Majors</strong> (EUR/USD, GBP/USD, USD/JPY) have the highest liquidity and tightest spreads. <strong>Minors</strong> don't include USD. <strong>Exotic pairs</strong> like USD/PKR have wider spreads but can present opportunities for Pakistani traders.</p>
+            </div>
+            <div class="explainer-card">
+              <h4>⚠️ Leverage Risk Warning</h4>
+              <p>Forex brokers offer high leverage (50:1 to 500:1). While this amplifies profits, it equally amplifies losses. <strong>Most retail forex traders lose money.</strong> Always use stop-losses and never trade with money you can't afford to lose.</p>
+            </div>
+          </div>
+        </section>
+
+        <!-- ======= TECHNICAL ANALYSIS ======= -->
+        <section id="markets" class="section">
+          <div class="section-header">
+            <h2>Technical Analysis</h2>
+            <div class="section-controls">
+              <div class="control-row">
+                <label>Market:</label>
+                <select id="marketTypeSelector" class="selector">
+                  <option value="crypto">Cryptocurrency</option>
+                </select>
+                <label>Asset:</label>
+                <select id="cryptoSelector" class="selector">
+                  <option value="">Select asset...</option>
+                </select>
+                <button id="searchCoinBtn" class="btn-secondary">🔍 Search</button>
+              </div>
+            </div>
+          </div>
+          <!-- Coin Search Modal -->
+          <div id="coinSearchModal" class="modal" style="display: none;">
+            <div class="modal-content">
+              <div class="modal-header">
+                <h3>Search Cryptocurrency</h3>
+                <button class="modal-close" id="closeSearchModal">&times;</button>
+              </div>
+              <div class="modal-body">
+                <input type="text" id="coinSearchInput" class="search-input" placeholder="Search by name or symbol..."/>
+                <div id="searchResults" class="search-results"></div>
+              </div>
+            </div>
+          </div>
+          <!-- TradingView Chart Widget -->
+          <div id="tvChartWrap" class="tv-chart-wrap" style="display:none">
+            <div class="tv-chart-header">
+              <div class="tv-chart-title" id="tvChartTitle">Chart</div>
+              <div class="tv-timeframe-btns">
+                <button class="tv-tf-btn active" data-tf="1D">1D</button>
+                <button class="tv-tf-btn" data-tf="1W">1W</button>
+                <button class="tv-tf-btn" data-tf="1M">1M</button>
+                <button class="tv-tf-btn" data-tf="3M">3M</button>
+                <button class="tv-tf-btn" data-tf="1Y">1Y</button>
+                <button class="tv-tf-btn" data-tf="ALL">ALL</button>
+              </div>
+            </div>
+            <div id="tvWidgetContainer" class="tv-widget-container"></div>
+          </div>
+
+          <!-- Trade Signal Card (shown above indicators) -->
+          <div id="tradeSignalCard" class="trade-signal-wrap"></div>
+
+          <div id="analysisContent" class="analysis-content">
+            <div class="info-message">
+              <span class="info-icon">📈</span>
+              <p>Select an asset above to view detailed technical analysis with signals</p>
+            </div>
+          </div>
+        </section>
+
+        <!-- ======= FUTURES ======= -->
+        <section id="futures" class="section">
+          <div class="section-header">
+            <h2>Crypto Futures Data</h2>
+            <p class="section-subtitle">Funding rates · Open interest · Long/short ratios</p>
+            <div class="section-controls">
+              <label>Cryptocurrency:</label>
+              <select id="futuresSelector" class="selector">
+                <option value="">Select a cryptocurrency...</option>
+              </select>
+            </div>
+          </div>
+          <div id="futuresContent" class="futures-content">
+            <div class="info-message">
+              <span class="info-icon">📊</span>
+              <p>Select a cryptocurrency to view futures indicators</p>
+            </div>
+          </div>
+        </section>
+
+        <!-- ======= PORTFOLIO TRACKER ======= -->
+        <section id="portfolio" class="section">
+          <div class="section-header">
+            <h2>💼 Portfolio Tracker</h2>
+            <p class="section-subtitle">Track your holdings across Crypto, Stocks & Forex — stored locally in your browser</p>
+          </div>
+
+          <!-- Portfolio Summary -->
+          <div class="portfolio-summary" id="portfolioSummary">
+            <div class="port-stat">
+              <div class="port-stat-label">Total Invested</div>
+              <div class="port-stat-value" id="portTotalInvested">$0.00</div>
+            </div>
+            <div class="port-stat">
+              <div class="port-stat-label">Current Value</div>
+              <div class="port-stat-value" id="portCurrentValue">$0.00</div>
+            </div>
+            <div class="port-stat">
+              <div class="port-stat-label">Total P&L</div>
+              <div class="port-stat-value" id="portPnL">$0.00</div>
+            </div>
+            <div class="port-stat">
+              <div class="port-stat-label">Return %</div>
+              <div class="port-stat-value" id="portReturn">0.00%</div>
+            </div>
+          </div>
+
+          <!-- Add Holding Form -->
+          <div class="add-holding-form" id="addHoldingForm">
+            <h3>Add Holding</h3>
+            <div class="form-row">
+              <div class="form-group">
+                <label>Asset Type</label>
+                <select id="holdingType" class="form-input">
+                  <option value="crypto">Crypto</option>
+                  <option value="psx">PSX Stock</option>
+                  <option value="forex">Forex / Currency</option>
+                  <option value="other">Other</option>
+                </select>
+              </div>
+              <div class="form-group">
+                <label>Symbol / Ticker</label>
+                <input type="text" id="holdingSymbol" class="form-input" placeholder="e.g. BTC, ENGRO, EUR">
+              </div>
+              <div class="form-group">
+                <label>Name</label>
+                <input type="text" id="holdingName" class="form-input" placeholder="e.g. Bitcoin">
+              </div>
+            </div>
+            <div class="form-row">
+              <div class="form-group">
+                <label>Quantity</label>
+                <input type="number" id="holdingQty" class="form-input" placeholder="0.00" step="any" min="0">
+              </div>
+              <div class="form-group">
+                <label>Buy Price (USD)</label>
+                <input type="number" id="holdingBuyPrice" class="form-input" placeholder="0.00" step="any" min="0">
+              </div>
+              <div class="form-group">
+                <label>Current Price (USD)</label>
+                <input type="number" id="holdingCurrentPrice" class="form-input" placeholder="0.00" step="any" min="0">
+              </div>
+              <div class="form-group form-group-action">
+                <label>&nbsp;</label>
+                <button class="btn-primary" onclick="addHolding()">+ Add</button>
+              </div>
+            </div>
+          </div>
+
+          <!-- Holdings Table -->
+          <div class="holdings-table-wrap">
+            <table class="holdings-table" id="holdingsTable">
+              <thead>
+                <tr>
+                  <th>Type</th>
+                  <th>Symbol</th>
+                  <th>Name</th>
+                  <th>Qty</th>
+                  <th>Buy Price</th>
+                  <th>Current Price</th>
+                  <th>Invested</th>
+                  <th>Current Value</th>
+                  <th>P&L</th>
+                  <th>Return</th>
+                  <th></th>
+                </tr>
+              </thead>
+              <tbody id="holdingsBody">
+                <tr class="empty-row">
+                  <td colspan="11">No holdings yet. Add your first position above.</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+          <div class="portfolio-actions">
+            <button class="btn-secondary" onclick="clearPortfolio()">🗑 Clear All</button>
+            <button class="btn-secondary" onclick="exportPortfolio()">⬇ Export CSV</button>
+          </div>
+        </section>
+
+        <!-- ======= CURRENCY CONVERTER ======= -->
+        <section id="converter" class="section">
+          <div class="section-header">
+            <h2>🔄 Currency Converter</h2>
+            <p class="section-subtitle">Convert between any fiat or crypto currency</p>
+          </div>
+          <div class="converter-card">
+            <div class="converter-row">
+              <div class="conv-group">
+                <label>Amount</label>
+                <input type="number" id="convAmount" class="conv-input" value="1" step="any" min="0">
+              </div>
+              <div class="conv-group">
+                <label>From</label>
+                <select id="convFrom" class="conv-select">
+                  <option value="USD">USD – US Dollar</option>
+                  <option value="PKR">PKR – Pakistani Rupee</option>
+                  <option value="EUR">EUR – Euro</option>
+                  <option value="GBP">GBP – British Pound</option>
+                  <option value="AED">AED – UAE Dirham</option>
+                  <option value="SAR">SAR – Saudi Riyal</option>
+                  <option value="JPY">JPY – Japanese Yen</option>
+                  <option value="BTC">BTC – Bitcoin</option>
+                  <option value="ETH">ETH – Ethereum</option>
+                  <option value="USDT">USDT – Tether</option>
+                </select>
+              </div>
+              <button class="conv-swap" onclick="swapConverter()" title="Swap currencies">⇄</button>
+              <div class="conv-group">
+                <label>To</label>
+                <select id="convTo" class="conv-select">
+                  <option value="PKR">PKR – Pakistani Rupee</option>
+                  <option value="USD">USD – US Dollar</option>
+                  <option value="EUR">EUR – Euro</option>
+                  <option value="GBP">GBP – British Pound</option>
+                  <option value="AED">AED – UAE Dirham</option>
+                  <option value="SAR">SAR – Saudi Riyal</option>
+                  <option value="JPY">JPY – Japanese Yen</option>
+                  <option value="BTC">BTC – Bitcoin</option>
+                  <option value="ETH">ETH – Ethereum</option>
+                  <option value="USDT">USDT – Tether</option>
+                </select>
+              </div>
+            </div>
+            <button class="btn-primary btn-wide" onclick="convertCurrency()">Convert</button>
+            <div class="conv-result" id="convResult"></div>
+          </div>
+
+          <!-- Quick PKR Rates -->
+          <div class="sub-section-title">PKR Exchange Rates</div>
+          <div class="pkr-rates-grid" id="pkrRatesGrid">
+            <div class="loading">Loading PKR rates...</div>
+          </div>
+        </section>
+
+        <!-- ======= RISK CALCULATOR ======= -->
+        <section id="calculator" class="section">
+          <div class="section-header">
+            <h2>🧮 Risk & Position Size Calculator</h2>
+            <p class="section-subtitle">Calculate exactly how much to buy, where to set SL/TP — the most important tool for any trader</p>
+          </div>
+
+          <div class="risk-explainer-banner">
+            <strong>The Golden Rule:</strong> Never risk more than <strong>1–2%</strong> of your total capital on a single trade. Professional traders stay in the game for years because they control losses, not because they always win.
+          </div>
+
+          <!-- ── Enhanced position sizer ── -->
+          <div class="rc-main-grid">
+            <div class="rc-form-card">
+              <h3>⚡ Position Size Calculator</h3>
+              <div class="rc-form-fields">
+                <div class="rc-form-row">
+                  <div class="rc-field">
+                    <label>Account Balance ($)</label>
+                    <input type="number" id="rcBalance" class="rc-input" placeholder="e.g. 10000" value="10000" oninput="calcStandalonePosition()">
+                  </div>
+                  <div class="rc-field">
+                    <label>Risk per Trade (%)</label>
+                    <input type="number" id="rcRiskPct" class="rc-input" placeholder="1" value="1" min="0.1" max="10" step="0.1" oninput="calcStandalonePosition()">
+                  </div>
+                </div>
+                <div class="rc-form-row">
+                  <div class="rc-field">
+                    <label>Entry Price</label>
+                    <input type="number" id="rcEntry" class="rc-input" placeholder="e.g. 50000" step="any" oninput="calcStandalonePosition()">
+                  </div>
+                  <div class="rc-field">
+                    <label>Stop Loss Price</label>
+                    <input type="number" id="rcSL" class="rc-input" placeholder="e.g. 48000" step="any" oninput="calcStandalonePosition()">
+                  </div>
+                </div>
+                <div class="rc-risk-presets">
+                  <span class="rc-preset-label">Quick risk:</span>
+                  <button class="rc-preset-btn" onclick="document.getElementById('rcRiskPct').value=0.5;calcStandalonePosition()">0.5%</button>
+                  <button class="rc-preset-btn" onclick="document.getElementById('rcRiskPct').value=1;calcStandalonePosition()">1%</button>
+                  <button class="rc-preset-btn" onclick="document.getElementById('rcRiskPct').value=2;calcStandalonePosition()">2%</button>
+                  <button class="rc-preset-btn" onclick="document.getElementById('rcRiskPct').value=5;calcStandalonePosition()">5%</button>
+                </div>
+              </div>
+
+              <!-- Results grid -->
+              <div class="rc-results-grid" id="rcResults">
+                <p class="dim" style="padding:1rem;grid-column:1/-1">Fill in the fields above to calculate your position size.</p>
+              </div>
+
+              <!-- Lot guide -->
+              <div class="rc-lot-guide" id="rcLotGuide"></div>
+            </div>
+
+            <!-- R:R Calculator (legacy) -->
+            <div class="rc-rr-card">
+              <h3>📐 R:R Quick Check</h3>
+              <div class="rc-form-fields">
+                <div class="rc-field">
+                  <label>Entry Price</label>
+                  <input type="number" id="rrEntry" class="rc-input" placeholder="Entry" step="any">
+                </div>
+                <div class="rc-field">
+                  <label>Stop Loss</label>
+                  <input type="number" id="rrStop" class="rc-input" placeholder="Stop Loss" step="any">
+                </div>
+                <div class="rc-field">
+                  <label>Take Profit Target</label>
+                  <input type="number" id="rrTarget" class="rc-input" placeholder="Take Profit" step="any">
+                </div>
+                <button class="btn-primary" onclick="calculateRR()" style="width:100%">Calculate R:R</button>
+              </div>
+              <div class="calc-result" id="rrResult"></div>
+
+              <div class="rc-rr-guide">
+                <div class="rr-guide-title">What is R:R?</div>
+                <p>Risk:Reward ratio compares how much you risk vs how much you stand to gain. A 1:2 R:R means risking $100 to make $200. Only take trades with R:R of at least 1:1.5 or better.</p>
+                <div class="rr-examples">
+                  <div class="rr-ex good">✅ 1:2 — Risk $100, gain $200</div>
+                  <div class="rr-ex good">✅ 1:3 — Risk $100, gain $300</div>
+                  <div class="rr-ex bad">❌ 1:0.5 — Risk $100, gain $50</div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Legacy calc kept for compatibility -->
+          <div style="display:none">
+            <input id="calcCapital"><input id="calcEntry"><input id="calcRiskPct"><input id="calcStopLoss">
+            <div id="calcResult"></div>
+          </div>
+        </section>
+
+        <!-- ======= SIGNAL HISTORY ======= -->
+        <section id="signal-history" class="section">
+          <div class="section-header">
+            <h2>📊 Signal History & Win Rate</h2>
+            <p class="section-subtitle">Track every signal you log, mark outcomes, and measure your edge over time</p>
+          </div>
+
+          <div class="sh-header-bar">
+            <div class="sh-stats-bar" id="shStats">
+              <div class="sh-stat"><div class="sh-stat-val">0</div><div class="sh-stat-lbl">Total</div></div>
+              <div class="sh-stat"><div class="sh-stat-val">0</div><div class="sh-stat-lbl">Closed</div></div>
+              <div class="sh-stat"><div class="sh-stat-val dim">—%</div><div class="sh-stat-lbl">Win Rate</div></div>
+              <div class="sh-stat"><div class="sh-stat-val positive">0</div><div class="sh-stat-lbl">Wins</div></div>
+              <div class="sh-stat"><div class="sh-stat-val negative">0</div><div class="sh-stat-lbl">Losses</div></div>
+              <div class="sh-stat"><div class="sh-stat-val">— / —</div><div class="sh-stat-lbl">Long WR / Short WR</div></div>
+            </div>
+            <div class="sh-action-btns">
+              <button class="btn-secondary" onclick="exportSignalHistoryCSV()">📥 Export CSV</button>
+              <button class="btn-danger" onclick="clearSignalHistory()">🗑️ Clear All</button>
+            </div>
+          </div>
+
+          <div class="sh-how-to">
+            <strong>How it works:</strong>
+            Go to Technical Analysis → select a coin → click <em>"Log to Signal History"</em> on the signal card.
+            Come back here to mark if it hit TP1/TP2/TP3 or got stopped out. Over time you'll know which setups work best for you.
+          </div>
+
+          <div id="signalHistoryTable">
+            <div class="empty-state" style="padding:2rem">No signals logged yet. Generate a signal from Technical Analysis and log it here.</div>
+          </div>
+        </section>
+
+        <!-- ======= EXCHANGES ======= -->
+        <section id="exchanges" class="section">
+          <!-- Dynamically rendered by exchanges.js initExchanges() -->
+        </section>
+
+        <!-- ======= PRICE ALERTS ======= -->
+        <section id="alerts" class="section">
+          <div class="section-header">
+            <h2>🔔 Price Alerts</h2>
+            <p class="section-subtitle">Browser-based alerts — active while this tab is open</p>
+          </div>
+          <div class="alert-notice">
+            <strong>Note:</strong> These alerts work while the TraderPro tab is open in your browser. Enable browser notifications when prompted.
+          </div>
+          <div class="add-alert-form">
+            <div class="form-row">
+              <div class="form-group">
+                <label>Asset</label>
+                <select id="alertSymbol" class="form-input" id="alertAsset">
+                  <option value="">Loading...</option>
+                </select>
+              </div>
+              <div class="form-group">
+                <label>Condition</label>
+                <select id="alertCondition" class="form-input">
+                  <option value="above">Price goes above</option>
+                  <option value="below">Price drops below</option>
+                </select>
+              </div>
+              <div class="form-group">
+                <label>Target Price (USD)</label>
+                <input type="number" id="alertPrice" class="form-input" placeholder="e.g. 50000" step="any" min="0">
+              </div>
+              <div class="form-group form-group-action">
+                <label>&nbsp;</label>
+                <button class="btn-primary" onclick="addAlert()">+ Add Alert</button>
+              </div>
+            </div>
+          </div>
+          <div id="alertsList" class="alerts-list">
+            <div class="empty-state">No alerts set. Add one above to get notified.</div>
+          </div>
+        </section>
+
+        <!-- ======= TRADING ACADEMY (Dynamic) ======= -->
+        <section id="academy" class="section">
+          <div class="section-header">
+            <h2>🎓 Trading Academy</h2>
+            <p class="section-subtitle">From zero to your first trade — <span id="academyLessonCount">loading…</span> · <span id="academyProgress">0% complete</span></p>
+          </div>
+
+          <!-- Dynamic track buttons injected by academy.js -->
+          <div id="academyTracksContainer" class="academy-tracks"></div>
+
+          <!-- Dynamic lesson content injected by academy.js -->
+          <div id="academyDynamicContent" class="academy-dynamic-content"></div>
+
+        </section>
+
+        <!-- ======= GLOSSARY ======= -->
+        <section id="glossary" class="section">
+          <div class="section-header">
+            <h2>📖 Trading Glossary</h2>
+            <p class="section-subtitle">A–Z reference for every trading term</p>
+          </div>
+          <div class="glossary-search">
+            <input type="text" id="glossarySearch" class="search-bar" placeholder="🔍 Search terms...">
+          </div>
+          <div id="glossaryContent" class="glossary-grid">
+            <!-- Populated by JS -->
+          </div>
+        </section>
+
+        <!-- ======= WATCHLIST ======= -->
+        <section id="watchlist" class="section">
+          <div class="section-header">
+            <h2>⭐ My Watchlist</h2>
+            <p class="section-subtitle">Your starred assets — updated live every 30 seconds</p>
+          </div>
+          <div id="watchlistContent">
+            <div class="loading">Loading watchlist...</div>
+          </div>
+        </section>
+
+        <!-- ======= PAPER TRADING ======= -->
+        <section id="papertrading" class="section">
+          <div class="section-header">
+            <h2>🎮 Paper Trading Simulator</h2>
+            <p class="section-subtitle">Practice with virtual $10,000 · No real money at risk · Learn before you earn</p>
+          </div>
+
+          <div class="pt-notice">
+            <strong>📌 What is Paper Trading?</strong> Paper trading uses virtual money to simulate real trades. It's how every professional trader practised before risking real capital. Use this to test strategies, understand position sizing, and build confidence.
+          </div>
+
+          <!-- Portfolio Summary -->
+          <div class="pt-summary" id="ptSummary">
+            <div class="pt-stat"><div class="pt-stat-label">Cash Balance</div><div class="pt-stat-value">$10,000.00</div></div>
+          </div>
+
+          <!-- Trade Entry Form -->
+          <div class="pt-trade-form">
+            <h3>Place a Trade</h3>
+            <div class="form-row">
+              <div class="form-group">
+                <label>Asset</label>
+                <select id="ptSymbol" class="form-input">
+                  <option value="">Loading...</option>
+                </select>
+              </div>
+              <div class="form-group">
+                <label>Quantity</label>
+                <input type="number" id="ptQty" class="form-input" placeholder="e.g. 0.1" step="any" min="0">
+              </div>
+              <div class="form-group">
+                <label>Price (USD)</label>
+                <div class="price-input-group">
+                  <input type="number" id="ptPrice" class="form-input" placeholder="e.g. 65000" step="any" min="0">
+                  <button id="ptFillPrice" class="btn-fill-price" onclick="fillCurrentPrice()">⟳ Current</button>
+                </div>
+              </div>
+            </div>
+            <div id="ptMessage" class="pt-message" style="display:none"></div>
+            <div class="pt-action-btns">
+              <button class="btn-buy" onclick="executePaperTrade('buy')">📈 Buy</button>
+              <button class="btn-sell" onclick="executePaperTrade('sell')">📉 Sell</button>
+              <button class="btn-secondary" onclick="resetPaperTrading()">🔄 Reset ($10,000)</button>
+            </div>
+          </div>
+
+          <!-- Open Positions -->
+          <div class="sub-section-title">Open Positions</div>
+          <div id="ptHoldings" class="pt-holdings">
+            <div class="pt-empty">No open positions.</div>
+          </div>
+
+          <!-- Trade History -->
+          <div class="sub-section-title">Trade History</div>
+          <div id="ptHistory" class="pt-history">
+            <div class="pt-empty">No trades yet.</div>
+          </div>
+        </section>
+
+        <!-- ======= ECONOMIC CALENDAR ======= -->
+        <section id="calendar" class="section">
+          <div class="section-header">
+            <h2>📅 Economic Calendar</h2>
+            <p class="section-subtitle">Upcoming high-impact events for Crypto, PSX, Forex & Global markets</p>
+          </div>
+
+          <div class="cal-filters">
+            <div class="cal-filter-group">
+              <span class="cal-filter-label">Market:</span>
+              <button class="cal-filter-btn active" data-group="cat" data-value="all">All</button>
+              <button class="cal-filter-btn" data-group="cat" data-value="pakistan">🇵🇰 Pakistan</button>
+              <button class="cal-filter-btn" data-group="cat" data-value="us">🇺🇸 US</button>
+              <button class="cal-filter-btn" data-group="cat" data-value="crypto">₿ Crypto</button>
+              <button class="cal-filter-btn" data-group="cat" data-value="global">🌐 Global</button>
+            </div>
+            <div class="cal-filter-group">
+              <span class="cal-filter-label">Impact:</span>
+              <button class="cal-filter-btn active" data-group="impact" data-value="all">All</button>
+              <button class="cal-filter-btn" data-group="impact" data-value="high">🔴 High</button>
+              <button class="cal-filter-btn" data-group="impact" data-value="medium">🟡 Medium</button>
+            </div>
+          </div>
+
+          <div class="cal-legend">
+            <span class="cal-legend-item high">🔴 High Impact — Can move markets significantly</span>
+            <span class="cal-legend-item medium">🟡 Medium Impact — Notable but predictable</span>
+            <span class="cal-tip">💡 Click any event to reveal its trading note</span>
+          </div>
+
+          <div id="calendarContent" class="calendar-content">
+            <div class="loading">Loading calendar...</div>
+          </div>
+        </section>
+
+        <!-- ======= NEWS ======= -->
+        <section id="news" class="section">
+          <div class="section-header">
+            <h2>📰 Market News</h2>
+            <div class="news-filter-row">
+              <button class="news-tab active" data-filter="all">All</button>
+              <button class="news-tab" data-filter="crypto">Crypto</button>
+              <button class="news-tab" data-filter="business">Business</button>
+              <select id="newsSymbolFilter" class="selector">
+                <option value="">All assets</option>
+              </select>
+            </div>
+          </div>
+          <div id="newsContent" class="news-grid">
+            <div class="loading">Loading news...</div>
+          </div>
+        </section>
+
+        <!-- ======= CRYPTO SCREENER ======= -->
+        <section id="screener" class="section">
+          <div class="section-header">
+            <h2 class="section-title">🔍 Crypto Screener</h2>
+            <p class="section-desc">Scan all tracked coins by RSI, volume spikes, buy/sell signals, and trend direction.</p>
+          </div>
+          <div id="screenerContent"></div>
+        </section>
+
+        <!-- ======= TRADE JOURNAL ======= -->
+        <section id="journal" class="section">
+          <div class="section-header">
+            <h2 class="section-title">📓 Trade Journal</h2>
+            <p class="section-desc">Log and analyse your trades. Track win rate, R:R, best strategies, and lessons learned.</p>
+          </div>
+          <div id="journalContent"></div>
+        </section>
+
+        <!-- ======= BACKTESTING ======= -->
+        <section id="backtest" class="section">
+          <div class="section-header">
+            <h2 class="section-title">⏱️ Backtesting Tool</h2>
+            <p class="section-desc">Test DCA and RSI strategies on historical crypto data to see how they would have performed.</p>
+          </div>
+          <div id="backtestContent"></div>
+        </section>
+
+        <!-- ======= GLOBAL MARKETS (US + UK) ======= -->
+        <section id="global-markets" class="section">
+          <div class="section-header">
+            <h2 class="section-title">🌍 US &amp; UK Markets</h2>
+            <p class="section-desc">S&amp;P 500 · NASDAQ · FTSE 100 · Top stocks from Wall Street &amp; London Stock Exchange</p>
+          </div>
+
+          <!-- Market Tabs -->
+          <div class="global-market-tabs">
+            <button class="gm-tab active" data-market="us" onclick="switchGlobalMarket('us', this)">🇺🇸 US Markets</button>
+            <button class="gm-tab" data-market="uk" onclick="switchGlobalMarket('uk', this)">🇬🇧 UK Markets</button>
+            <button class="gm-tab" data-market="screener" onclick="switchGlobalMarket('screener', this)">🔍 Stock Screener</button>
+          </div>
+
+          <!-- US Markets Panel -->
+          <div class="gm-panel active" id="gmPanelUs">
+            <div class="gm-indices" id="usIndices">
+              <div class="loading">Loading US indices…</div>
+            </div>
+            <div class="sub-section-title" style="margin-top:1.5rem">
+              <span>Top US Stocks</span>
+              <input type="text" id="usStockSearch" class="search-input-sm" placeholder="Search stocks…" oninput="filterGlobalStocks('us', this.value)">
+            </div>
+            <div class="gm-stocks-table-wrap">
+              <table class="gm-stocks-table" id="usStocksTable">
+                <thead><tr>
+                  <th>Stock</th><th>Price</th><th>Change</th><th>Volume</th><th>Market Cap</th><th>P/E</th><th>52w High</th><th>52w Low</th><th>Action</th>
+                </tr></thead>
+                <tbody id="usStocksBody"><tr><td colspan="9" class="gm-loading">Loading US stocks…</td></tr></tbody>
+              </table>
+            </div>
+          </div>
+
+          <!-- UK Markets Panel -->
+          <div class="gm-panel" id="gmPanelUk">
+            <div class="gm-indices" id="ukIndices">
+              <div class="loading">Loading UK indices…</div>
+            </div>
+            <div class="sub-section-title" style="margin-top:1.5rem">
+              <span>Top FTSE 100 Stocks</span>
+              <input type="text" id="ukStockSearch" class="search-input-sm" placeholder="Search stocks…" oninput="filterGlobalStocks('uk', this.value)">
+            </div>
+            <div class="gm-stocks-table-wrap">
+              <table class="gm-stocks-table" id="ukStocksTable">
+                <thead><tr>
+                  <th>Stock</th><th>Price</th><th>Change</th><th>Volume</th><th>Market Cap</th><th>P/E</th><th>52w High</th><th>52w Low</th><th>Action</th>
+                </tr></thead>
+                <tbody id="ukStocksBody"><tr><td colspan="9" class="gm-loading">Loading UK stocks…</td></tr></tbody>
+              </table>
+            </div>
+          </div>
+
+          <!-- Global Screener Panel -->
+          <div class="gm-panel" id="gmPanelScreener">
+            <div class="gm-screener-filters">
+              <label>Market
+                <select id="gmsMarket">
+                  <option value="us">🇺🇸 US (NASDAQ/NYSE)</option>
+                  <option value="uk">🇬🇧 UK (FTSE 100)</option>
+                </select>
+              </label>
+              <label>Change %
+                <select id="gmsChange">
+                  <option value="all">Any</option>
+                  <option value="up">Gaining (+)</option>
+                  <option value="down">Falling (−)</option>
+                  <option value="up2">+2% or more</option>
+                  <option value="down2">−2% or more</option>
+                </select>
+              </label>
+              <label>Sort By
+                <select id="gmsSort">
+                  <option value="marketCap">Market Cap</option>
+                  <option value="changePercent">Change %</option>
+                  <option value="volume">Volume</option>
+                  <option value="pe">P/E Ratio</option>
+                </select>
+              </label>
+              <button class="btn-primary" onclick="runGlobalScreener()">🔍 Run Screener</button>
+            </div>
+            <div id="gmsResults" class="gm-screener-results">
+              <div class="gm-screener-hint">Select a market and click Run Screener to scan stocks.</div>
+            </div>
+          </div>
+
+          <!-- Beginner Guide -->
+          <div class="gm-guide">
+            <div class="gm-guide-title">💡 How to Invest in US &amp; UK Stocks from Pakistan</div>
+            <div class="gm-guide-steps">
+              <div class="gm-guide-step">
+                <div class="gm-step-num">1</div>
+                <div class="gm-step-text"><strong>Choose a Broker:</strong> Use international brokers like Interactive Brokers, TD Ameritrade, or local options like EasyInvest. Check if they're available for Pakistani residents.</div>
+              </div>
+              <div class="gm-guide-step">
+                <div class="gm-step-num">2</div>
+                <div class="gm-step-text"><strong>Open an Account:</strong> You'll need your CNIC, proof of income, and a bank account. Account opening takes 1-5 business days.</div>
+              </div>
+              <div class="gm-guide-step">
+                <div class="gm-step-num">3</div>
+                <div class="gm-step-text"><strong>Fund via Remittance:</strong> Transfer USD from Pakistan using banking channels. SBP allows individuals to remit up to $100,000/year for investment purposes.</div>
+              </div>
+              <div class="gm-guide-step">
+                <div class="gm-step-num">4</div>
+                <div class="gm-step-text"><strong>US Tax (W-8BEN):</strong> Non-US residents fill a W-8BEN form (15% withholding tax on dividends). Capital gains are generally not taxed by the US for non-residents.</div>
+              </div>
+              <div class="gm-guide-step">
+                <div class="gm-step-num">5</div>
+                <div class="gm-step-text"><strong>FBR Reporting:</strong> You must declare foreign assets/income in your Pakistani tax return. Failure to report is a legal risk.</div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <!-- ======= TRADE IDEAS ======= -->
+        <section id="trade-ideas" class="section">
+          <!-- Dynamically rendered by tradeIdeas.js initTradeIdeas() -->
+        </section>
+
+        <!-- ======= EXPORT CENTER ======= -->
+        <section id="export-center" class="section">
+          <!-- Dynamically rendered by exportCenter.js initExportCenter() -->
+        </section>
+
+        <!-- ======= MULTI-TIMEFRAME ANALYSIS ======= -->
+        <section id="mtf" class="section">
+          <!-- Dynamically rendered by mtf.js initMTF() -->
+        </section>
+
+        <!-- ======= CORRELATION MATRIX ======= -->
+        <section id="correlation" class="section">
+          <!-- Dynamically rendered by correlation.js initCorrelation() -->
+        </section>
+
+        <!-- ======= AI TRADE COACH ======= -->
+        <section id="ai-coach" class="section">
+          <!-- Dynamically rendered by aiCoach.js initAICoach() -->
+        </section>
+
+        <!-- ======= CRYPTO TAX CALCULATOR ======= -->
+        <section id="tax-calc" class="section">
+          <!-- Dynamically rendered by taxCalc.js initTaxCalc() -->
+        </section>
+
+        <!-- ======= PAYOFF CHART ======= -->
+        <section id="payoff" class="section">
+          <!-- Dynamically rendered by payoffChart.js initPayoffChart() -->
+        </section>
+
+        <!-- ======= SENTIMENT DASHBOARD ======= -->
+        <section id="sentiment" class="section">
+          <!-- Dynamically rendered by sentiment.js initSentimentDash() -->
+        </section>
+
+        <!-- ======= PORTFOLIO ANALYTICS ======= -->
+        <section id="portfolio-analytics" class="section">
+          <!-- Dynamically rendered by portfolioAnalytics.js initPortfolioAnalytics() -->
+        </section>
+
+        <!-- ======= SMART ALERTS CENTER ======= -->
+        <section id="smart-alerts" class="section">
+          <!-- Dynamically rendered by smartAlerts.js initSmartAlerts() -->
+        </section>
+
+        <section id="ml-predict" class="section">
+          <!-- Dynamically rendered by mlPredict.js -->
+        </section>
+
+        <!-- ======= AUTOTRADE ENGINE ======= -->
+        <section id="autotrade" class="section">
+          <!-- Dynamically rendered by autoTrade.js -->
+        </section>
+
+        <!-- ======= ON-CHAIN ANALYTICS ======= -->
+        <section id="onchain-analytics" class="section">
+          <!-- Dynamically rendered by onChainAnalytics.js -->
+        </section>
+
+        <!-- ======= ORDER BOOK HEATMAP ======= -->
+        <section id="order-book-heatmap" class="section">
+          <!-- Dynamically rendered by orderBookHeatmap.js -->
+        </section>
+
+        <!-- ======= ARBITRAGE SCANNER ======= -->
+        <section id="arbitrage-scanner" class="section">
+          <!-- Dynamically rendered by arbitrageScanner.js -->
+        </section>
+
+        <!-- ======= LIQUIDATION HEATMAP ======= -->
+        <section id="liquidation-heatmap" class="section">
+          <!-- Dynamically rendered by liquidationHeatmap.js -->
+        </section>
+
+        <!-- ======= MARKET SCANNER & SCREENER ======= -->
+        <section id="market-scanner" class="section">
+          <!-- Dynamically rendered by marketScanner.js -->
+        </section>
+
+        <!-- ======= ALGORITHMIC STRATEGIES ======= -->
+        <section id="algo-strategies" class="section">
+          <!-- Dynamically rendered by algoStrategies.js -->
+        </section>
+
+        <!-- ======= AI TRADING ASSISTANT ======= -->
+        <section id="ai-trading" class="section">
+          <!-- Dynamically rendered by aiTrading.js -->
+        </section>
+
+        <!-- ======= DCA CALCULATOR & SIMULATOR ======= -->
+        <section id="dca-calculator" class="section">
+          <!-- Dynamically rendered by dcaCalculator.js -->
+        </section>
+
+        <!-- ======= NEWS SENTIMENT SIGNALS ======= -->
+        <section id="news-signals" class="section">
+          <!-- Dynamically rendered by newsSentimentSignals.js -->
+        </section>
+
+        <!-- ======= FUTURES SCANNER ======= -->
+        <section id="futures-scanner" class="section">
+          <!-- Dynamically rendered by futuresScanner.js -->
+        </section>
+
+        <!-- ======= STRATEGY BUILDER ======= -->
+        <section id="strategy-builder" class="section">
+          <!-- Dynamically rendered by strategyBuilder.js -->
+        </section>
+
+      </main>
     </div>
+  </div>
 
-    <!-- Scripts -->
-    <script src="js/utils.js"></script>
-    <script src="js/chartManager.js"></script>
-    <script src="js/analysisDisplay.js"></script>
-    <script src="js/newsDisplay.js"></script>
-    <script src="js/coinSearch.js"></script>
-    <script src="js/futuresDisplay.js"></script>
-    <script src="js/app.js"></script>
+  <!-- Scripts -->
+  <script src="js/utils.js"></script>
+  <script src="js/chartManager.js"></script>
+  <script src="js/analysisDisplay.js"></script>
+  <script src="js/newsDisplay.js"></script>
+  <script src="js/coinSearch.js"></script>
+  <script src="js/futuresDisplay.js"></script>
+  <script src="js/portfolio.js"></script>
+  <script src="js/glossary.js"></script>
+  <script src="js/watchlist.js"></script>
+  <script src="js/paperTrading.js"></script>
+  <script src="js/economicCalendar.js"></script>
+  <script src="js/globalMarkets.js"></script>
+  <script src="js/screener.js"></script>
+  <script src="js/tradeJournal.js"></script>
+  <script src="js/universalSearch.js"></script>
+  <script src="js/backtest.js"></script>
+  <script src="js/newsSentiment.js"></script>
+  <script src="js/signalEngine.js"></script>
+  <script src="js/academy.js"></script>
+  <script src="js/exchanges.js"></script>
+  <script src="js/tickerBar.js"></script>
+  <script src="js/dashboardWidgets.js"></script>
+  <script src="js/tradeIdeas.js"></script>
+  <script src="js/screenerV2.js"></script>
+  <script src="js/paperTradingV2.js"></script>
+  <script src="js/exportCenter.js"></script>
+  <script src="js/mtf.js"></script>
+  <script src="js/correlation.js"></script>
+  <script src="js/aiCoach.js"></script>
+  <script src="js/taxCalc.js"></script>
+  <script src="js/payoffChart.js"></script>
+  <script src="js/sentiment.js"></script>
+  <script src="js/portfolioAnalytics.js"></script>
+  <script src="js/smartAlerts.js"></script>
+  <script src="js/mlPredict.js?v=2"></script>
+  <script src="js/marketScanner.js?v=1"></script>
+  <script src="js/algoStrategies.js?v=1"></script>
+  <script src="js/aiTrading.js?v=1"></script>
+  <script src="js/autoTrade.js?v=1"></script>
+  <script src="js/dcaCalculator.js?v=1"></script>
+  <script src="js/newsSentimentSignals.js?v=1"></script>
+  <script src="js/futuresScanner.js?v=1"></script>
+  <script src="js/strategyBuilder.js?v=1"></script>
+  <script src="js/onChainAnalytics.js?v=1"></script>
+  <script src="js/orderBookHeatmap.js?v=1"></script>
+  <script src="js/arbitrageScanner.js?v=1"></script>
+  <script src="js/liquidationHeatmap.js?v=1"></script>
+  <script src="js/app.js?v=6"></script>
+
+  <!-- PWA Service Worker Registration -->
+  <script>
+    if ('serviceWorker' in navigator) {
+      window.addEventListener('load', () => {
+        navigator.serviceWorker.register('/sw.js')
+          .then(reg => console.log('[SW] Registered:', reg.scope))
+          .catch(err => console.log('[SW] Registration failed:', err));
+      });
+    }
+
+    // Handle install prompt
+    let deferredPrompt;
+    window.addEventListener('beforeinstallprompt', (e) => {
+      e.preventDefault();
+      deferredPrompt = e;
+      // Show install button if it exists
+      const installBtn = document.getElementById('pwaInstallBtn');
+      if (installBtn) {
+        installBtn.style.display = 'flex';
+        installBtn.addEventListener('click', () => {
+          deferredPrompt.prompt();
+          deferredPrompt.userChoice.then((result) => {
+            deferredPrompt = null;
+            installBtn.style.display = 'none';
+          });
+        });
+      }
+    });
+  </script>
 </body>
-
 </html>
