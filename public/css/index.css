@@ -3912,3 +3912,600 @@ tr:hover td {
   :root { --sidebar-width: 220px; }
 }
 
+
+/* ── USER INFO HEADER ──────────────────────────────────────────────── */
+
+.header-user {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  background: var(--color-bg-card);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  padding: 0.3rem 0.5rem 0.3rem 0.375rem;
+  cursor: default;
+  transition: border-color var(--transition-fast);
+}
+
+.header-user:hover {
+  border-color: var(--color-accent-primary);
+}
+
+.user-avatar {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, var(--color-accent-primary), #8b9ff4);
+  color: white;
+  font-size: 0.75rem;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  text-transform: uppercase;
+}
+
+.user-details {
+  display: flex;
+  flex-direction: column;
+  line-height: 1.2;
+}
+
+.user-name {
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--color-text-primary);
+  max-width: 90px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.user-role {
+  font-size: 0.65rem;
+  color: var(--color-text-muted);
+  text-transform: capitalize;
+}
+
+.user-role[data-role="admin"]::before {
+  content: '★ ';
+  color: #f59e0b;
+}
+
+.btn-logout {
+  background: none;
+  border: none;
+  color: var(--color-text-muted);
+  font-size: 1rem;
+  cursor: pointer;
+  padding: 0.2rem 0.3rem;
+  border-radius: var(--radius-sm);
+  transition: color var(--transition-fast), background var(--transition-fast);
+  line-height: 1;
+  margin-left: 0.125rem;
+}
+
+.btn-logout:hover {
+  color: var(--color-danger);
+  background: rgba(255,95,87,0.1);
+}
+
+@media (max-width: 768px) {
+  .user-details { display: none; }
+  .header-user { padding: 0.3rem; }
+}
+
+/* ═══════════════════════════════════════════════════
+   TRADING COCKPIT
+   ═══════════════════════════════════════════════════ */
+
+/* ── Coin Selector Bar ─────────────────────────────── */
+.cockpit-coin-bar {
+  display: flex;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+  margin-bottom: 1.25rem;
+  padding: 0.875rem 1rem;
+  background: var(--color-bg-card);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  overflow-x: auto;
+  scrollbar-width: thin;
+}
+
+.coin-pill {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  background: var(--color-bg-secondary);
+  border: 1px solid var(--color-border);
+  border-radius: 24px;
+  padding: 0.35rem 0.85rem;
+  cursor: pointer;
+  transition: all 0.2s;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+.coin-pill:hover {
+  border-color: var(--coin-color, var(--color-accent-primary));
+  background: color-mix(in srgb, var(--coin-color, #6378dc) 8%, transparent);
+}
+.coin-pill.active {
+  border-color: var(--coin-color, var(--color-accent-primary));
+  background: color-mix(in srgb, var(--coin-color, #6378dc) 15%, transparent);
+  box-shadow: 0 0 12px color-mix(in srgb, var(--coin-color, #6378dc) 30%, transparent);
+}
+.coin-pill-icon { font-size: 0.9rem; font-weight: 700; }
+.coin-pill-sym  { font-size: 0.8rem; font-weight: 700; color: var(--color-text-primary); }
+.coin-pill-price{ font-size: 0.75rem; color: var(--color-text-muted); }
+
+/* ── Loading ─────────────────────────────────────────── */
+.cockpit-loading-bar {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.75rem 1rem;
+  margin-bottom: 1rem;
+  background: rgba(99,120,220,0.06);
+  border: 1px solid rgba(99,120,220,0.2);
+  border-radius: var(--radius-md);
+  color: var(--color-text-muted);
+  font-size: 0.875rem;
+}
+.cockpit-empty {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.75rem;
+  min-height: 180px;
+  color: var(--color-text-muted);
+  font-size: 0.875rem;
+}
+#cockpit-content { transition: opacity 0.3s; }
+
+/* ── Hero: Price + Stats ─────────────────────────────── */
+.cockpit-hero {
+  display: flex;
+  align-items: center;
+  gap: 1.5rem;
+  padding: 1.25rem 1.5rem;
+  background: var(--color-bg-card);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  margin-bottom: 1rem;
+  flex-wrap: wrap;
+}
+.cockpit-hero-placeholder {
+  width: 100%; display: flex; justify-content: center;
+  padding: 1.5rem; color: var(--color-text-muted);
+}
+.cockpit-hero-left { display: flex; align-items: center; gap: 1rem; }
+.cockpit-coin-avatar {
+  width: 56px; height: 56px;
+  border-radius: 50%;
+  border: 2px solid;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 1.4rem; font-weight: 800;
+  flex-shrink: 0;
+}
+.cockpit-coin-name { font-size: 1rem; font-weight: 600; color: var(--color-text-primary); }
+.cockpit-coin-sym  { color: var(--color-text-muted); font-weight: 400; font-size: 0.9rem; }
+.cockpit-price { font-size: 2rem; font-weight: 800; line-height: 1.1; letter-spacing: -0.03em; color: var(--color-text-primary); }
+.cockpit-change { font-size: 0.95rem; font-weight: 600; margin-top: 0.1rem; }
+.cockpit-change-label { font-size: 0.75rem; opacity: 0.7; }
+
+.cockpit-hero-right {
+  display: flex; gap: 1.5rem; flex-wrap: wrap; margin-left: auto;
+}
+.cockpit-stat { display: flex; flex-direction: column; gap: 0.1rem; }
+.cockpit-stat span { font-size: 0.7rem; color: var(--color-text-muted); text-transform: uppercase; letter-spacing: 0.05em; }
+.cockpit-stat strong { font-size: 0.9rem; font-weight: 600; color: var(--color-text-primary); }
+
+.cockpit-sparkline-wrap { width: 200px; flex-shrink: 0; }
+@media(max-width:900px) { .cockpit-sparkline-wrap { display: none; } }
+
+/* ── Tabs ────────────────────────────────────────────── */
+.cockpit-tabs {
+  display: flex; gap: 0.25rem; margin-bottom: 1.25rem;
+  border-bottom: 1px solid var(--color-border);
+  padding-bottom: 0;
+  overflow-x: auto; scrollbar-width: none;
+}
+.cockpit-tab {
+  background: transparent; border: none;
+  color: var(--color-text-muted);
+  font-size: 0.875rem; font-weight: 500;
+  padding: 0.6rem 1rem;
+  cursor: pointer; white-space: nowrap;
+  border-bottom: 2px solid transparent;
+  transition: color 0.2s, border-color 0.2s;
+  margin-bottom: -1px;
+}
+.cockpit-tab:hover { color: var(--color-text-primary); }
+.cockpit-tab.active {
+  color: var(--color-accent-primary);
+  border-bottom-color: var(--color-accent-primary);
+}
+
+/* ── Overview Grid ────────────────────────────────────── */
+.overview-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 1rem;
+}
+.ov-news-wide { grid-column: span 2; }
+
+@media(max-width:1100px) { .overview-grid { grid-template-columns: 1fr 1fr; } .ov-news-wide { grid-column: span 2; } }
+@media(max-width:700px) { .overview-grid { grid-template-columns: 1fr; } .ov-news-wide { grid-column: span 1; } }
+
+.ov-card {
+  background: var(--color-bg-card);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  padding: 1rem 1.1rem;
+  display: flex; flex-direction: column; gap: 0.5rem;
+  transition: border-color 0.2s;
+}
+.ov-card:hover { border-color: rgba(99,120,220,0.3); }
+.ov-card-label {
+  font-size: 0.7rem; font-weight: 700;
+  text-transform: uppercase; letter-spacing: 0.08em;
+  color: var(--color-text-muted);
+}
+
+/* Signal card */
+.ov-signal-main { font-size: 1.75rem; font-weight: 800; line-height: 1; }
+.ov-conf-bar-bg { height: 6px; border-radius: 3px; background: var(--color-bg-secondary); overflow: hidden; }
+.ov-conf-bar    { height: 100%; border-radius: 3px; transition: width 0.6s; }
+.ov-conf-text   { font-size: 0.75rem; color: var(--color-text-muted); }
+.ov-signal-detail { font-size: 0.75rem; color: var(--color-text-muted); }
+
+/* Polymarket card */
+.ov-poly-title  { font-size: 0.85rem; font-weight: 500; color: var(--color-text-primary); line-height: 1.3; min-height: 2.6em; }
+.ov-poly-prob-row { display: flex; justify-content: space-between; font-size: 0.8rem; }
+.ov-poly-bar { height: 8px; border-radius: 4px; overflow: hidden; display: flex; }
+.ov-poly-meta { font-size: 0.75rem; color: var(--color-text-muted); }
+.poly-live-dot { font-size: 0.65rem; color: #2dd882; animation: pulse-dot 2s infinite; }
+
+/* Exchange card */
+.ov-ex-row { display: flex; justify-content: space-between; font-size: 0.85rem; padding: 0.25rem 0; border-bottom: 1px solid var(--color-border); }
+.ov-ex-row:last-of-type { border-bottom: none; }
+.ov-ex-name { color: var(--color-text-muted); }
+.ov-ex-price { font-weight: 600; color: var(--color-text-primary); }
+.ov-ex-price.best-buy  { color: #2dd882; }
+.ov-ex-price.best-sell { color: #ff5f57; }
+.ov-spread-line { font-size: 0.75rem; color: var(--color-text-muted); line-height: 1.4; margin-top: 0.25rem; }
+
+/* Macro card */
+.ov-fg-score  { font-size: 2.5rem; font-weight: 800; line-height: 1; }
+.ov-fg-label  { font-size: 0.9rem; font-weight: 600; }
+.ov-fg-bar-bg { height: 6px; border-radius: 3px; background: var(--color-bg-secondary); overflow: hidden; }
+.ov-fg-bar    { height: 100%; border-radius: 3px; transition: width 0.6s; }
+.ov-fg-note   { font-size: 0.75rem; color: var(--color-text-muted); line-height: 1.4; }
+
+/* News card */
+.ov-news-item {
+  display: flex; align-items: flex-start; gap: 0.5rem;
+  padding: 0.4rem 0; border-bottom: 1px solid var(--color-border);
+  text-decoration: none; color: inherit;
+  transition: opacity 0.2s;
+}
+.ov-news-item:last-of-type { border-bottom: none; }
+.ov-news-item:hover { opacity: 0.75; }
+.ov-news-dot { width: 7px; height: 7px; border-radius: 50%; flex-shrink: 0; margin-top: 5px; }
+.ov-news-text { font-size: 0.82rem; color: var(--color-text-primary); line-height: 1.3; flex: 1; }
+.ov-news-source { font-size: 0.7rem; color: var(--color-text-muted); white-space: nowrap; }
+
+/* Position quick card */
+.ov-pos-input {
+  width: 100%;
+  background: var(--color-bg-secondary);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  color: var(--color-text-primary);
+  padding: 0.45rem 0.75rem;
+  font-size: 0.9rem; outline: none;
+  transition: border-color 0.2s;
+}
+.ov-pos-input:focus { border-color: var(--color-accent-primary); }
+.ov-pos-result {
+  background: var(--color-bg-secondary);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  padding: 0.6rem 0.75rem;
+  font-size: 0.8rem; color: var(--color-text-muted);
+  min-height: 60px;
+  display: flex; flex-direction: column; gap: 0.15rem;
+}
+
+/* Drill buttons */
+.ov-drill-btn {
+  background: transparent;
+  border: 1px solid var(--color-border);
+  color: var(--color-accent-primary);
+  border-radius: var(--radius-sm);
+  font-size: 0.78rem; font-weight: 600;
+  padding: 0.35rem 0.75rem;
+  cursor: pointer; margin-top: auto;
+  transition: all 0.2s;
+}
+.ov-drill-btn:hover { background: var(--color-accent-primary); color: white; border-color: var(--color-accent-primary); }
+.ov-drill-btn.secondary { color: var(--color-text-muted); }
+
+/* ── News Tab ────────────────────────────────────────── */
+.news-cockpit-list { display: flex; flex-direction: column; gap: 0; }
+.news-cockpit-item {
+  display: flex; align-items: center; gap: 1rem;
+  padding: 0.9rem 1rem;
+  border-bottom: 1px solid var(--color-border);
+  text-decoration: none; color: inherit;
+  background: var(--color-bg-card);
+  transition: background 0.2s;
+}
+.news-cockpit-item:hover { background: var(--color-bg-secondary); }
+.nci-sentiment {
+  border: 1px solid; border-radius: 6px;
+  padding: 0.25rem 0.5rem; flex-shrink: 0;
+  min-width: 64px; text-align: center;
+}
+.nci-body { flex: 1; }
+.nci-title  { font-size: 0.9rem; font-weight: 500; color: var(--color-text-primary); line-height: 1.35; }
+.nci-meta   { font-size: 0.75rem; color: var(--color-text-muted); margin-top: 0.25rem; }
+.nci-arrow  { color: var(--color-text-muted); font-size: 1rem; flex-shrink: 0; }
+
+/* ── Signals Tab ─────────────────────────────────────── */
+.signals-layout {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  gap: 1rem;
+  margin-bottom: 1rem;
+}
+@media(max-width:900px) { .signals-layout { grid-template-columns: 1fr; } }
+
+.sig-label { font-size: 0.7rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.08em; color: var(--color-text-muted); margin-bottom: 0.25rem; }
+.sig-value { font-size: 2rem; font-weight: 800; line-height: 1; margin-bottom: 0.5rem; }
+.sig-conf-row { display: flex; align-items: center; gap: 0.75rem; margin-bottom: 1rem; }
+.sig-conf-bar-bg { flex: 1; height: 6px; border-radius: 3px; background: var(--color-bg-secondary); overflow: hidden; }
+.sig-conf-row span { font-size: 0.8rem; font-weight: 600; color: var(--color-text-muted); white-space: nowrap; }
+.sig-indicators { display: flex; flex-direction: column; gap: 0.4rem; }
+.sig-ind-row { display: flex; justify-content: space-between; font-size: 0.85rem; }
+.sig-ind-row span { color: var(--color-text-muted); }
+
+.sig-poly-title { font-size: 0.875rem; line-height: 1.35; color: var(--color-text-primary); margin-bottom: 0.75rem; }
+.sig-poly-prob { display: flex; align-items: center; gap: 1rem; margin-bottom: 0.5rem; }
+.sig-poly-bar { flex: 1; height: 10px; border-radius: 5px; overflow: hidden; display: flex; }
+
+.signals-llm-cta {
+  display: flex; align-items: center; justify-content: space-between; gap: 1rem;
+  background: rgba(99,120,220,0.06);
+  border: 1px solid rgba(99,120,220,0.2);
+  border-radius: var(--radius-md);
+  padding: 1rem 1.25rem;
+  flex-wrap: wrap;
+}
+.llm-cta-text { font-size: 0.875rem; color: var(--color-text-muted); line-height: 1.4; }
+.llm-cta-text strong { color: var(--color-text-primary); }
+
+/* ── Exchanges Tab ────────────────────────────────────── */
+.exchanges-layout { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; }
+@media(max-width:800px) { .exchanges-layout { grid-template-columns: 1fr; } }
+
+.ex-table { width: 100%; border-collapse: collapse; font-size: 0.875rem; }
+.ex-table th { text-align: left; padding: 0.5rem 0.75rem; border-bottom: 1px solid var(--color-border); color: var(--color-text-muted); font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.05em; }
+.ex-table td { padding: 0.6rem 0.75rem; border-bottom: 1px solid var(--color-border); }
+.ex-table tr:last-child td { border-bottom: none; }
+.ex-row-best { background: rgba(45,216,130,0.05); }
+.ex-row-worst { background: rgba(255,95,87,0.05); }
+.ex-name { font-weight: 600; color: var(--color-text-primary); }
+.ex-badge {
+  font-size: 0.65rem; font-weight: 700;
+  padding: 0.15rem 0.45rem; border-radius: 4px;
+  text-transform: uppercase;
+}
+.ex-badge.buy  { background: rgba(45,216,130,0.15); color: #2dd882; }
+.ex-badge.sell { background: rgba(255,95,87,0.15);  color: #ff5f57; }
+
+.arb-spread-display { display: flex; gap: 2rem; margin-bottom: 1rem; }
+.arb-stat-val { font-size: 1.75rem; font-weight: 800; color: var(--color-text-primary); }
+.arb-stat-lab { font-size: 0.75rem; color: var(--color-text-muted); }
+.arb-route { display: flex; align-items: center; gap: 0.75rem; margin-bottom: 0.75rem; }
+.arb-step { flex: 1; padding: 0.6rem; border-radius: var(--radius-sm); font-size: 0.85rem; text-align: center; line-height: 1.3; }
+.arb-step.buy  { background: rgba(45,216,130,0.1);  border: 1px solid rgba(45,216,130,0.25); }
+.arb-step.sell { background: rgba(255,95,87,0.1);   border: 1px solid rgba(255,95,87,0.25); }
+.arb-arrow { font-size: 1.25rem; color: var(--color-text-muted); flex-shrink: 0; }
+.arb-note  { font-size: 0.75rem; color: var(--color-text-muted); line-height: 1.4; margin-bottom: 0.75rem; }
+
+/* ── Position Tab ─────────────────────────────────────── */
+.pos-cockpit-wrap { display: flex; flex-direction: column; gap: 1rem; }
+.pos-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem; margin-bottom: 1rem; }
+.pos-field label { display: block; font-size: 0.75rem; font-weight: 500; color: var(--color-text-muted); text-transform: uppercase; letter-spacing: 0.04em; margin-bottom: 0.3rem; }
+.pos-field input, .pos-field select { width: 100%; background: var(--color-bg-secondary); border: 1px solid var(--color-border); border-radius: var(--radius-sm); color: var(--color-text-primary); padding: 0.5rem 0.75rem; font-size: 0.875rem; outline: none; transition: border-color 0.2s; }
+.pos-field input:focus, .pos-field select:focus { border-color: var(--color-accent-primary); }
+
+.pos-result-panel { margin-top: 0.75rem; }
+.pos-result-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 0.75rem; margin-bottom: 0.75rem; }
+@media(max-width:700px) { .pos-result-grid { grid-template-columns: 1fr 1fr; } }
+.pos-result-item { background: var(--color-bg-secondary); border: 1px solid var(--color-border); border-radius: var(--radius-md); padding: 0.75rem; text-align: center; }
+.pri-label { font-size: 0.7rem; color: var(--color-text-muted); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 0.25rem; }
+.pri-value { font-size: 1.1rem; font-weight: 700; color: var(--color-text-primary); }
+.pri-sub   { font-size: 0.7rem; color: var(--color-text-muted); margin-top: 0.2rem; }
+.pos-rr-row { font-size: 0.8rem; color: var(--color-text-muted); padding: 0.6rem 0.75rem; background: var(--color-bg-secondary); border: 1px solid var(--color-border); border-radius: var(--radius-sm); }
+
+/* ── Multi-Timeframe Signals ───────────────────────────── */
+.mtf-section {
+  background: var(--color-bg-card);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  padding: 1rem 1.25rem;
+  margin-bottom: 1rem;
+}
+
+.mtf-header {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  margin-bottom: 0.875rem;
+  flex-wrap: wrap;
+}
+
+.mtf-title {
+  font-size: 0.875rem;
+  font-weight: 700;
+  color: var(--color-text-primary);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.mtf-timestamp {
+  font-size: 0.75rem;
+  color: var(--color-text-muted);
+  margin-left: auto;
+}
+
+.mtf-consensus {
+  font-size: 0.85rem;
+  font-weight: 600;
+}
+
+.mtf-chips-row {
+  display: flex;
+  align-items: stretch;
+  gap: 0.625rem;
+  flex-wrap: wrap;
+}
+
+.mtf-chip {
+  flex: 1;
+  min-width: 100px;
+  padding: 0.75rem;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  background: var(--color-bg-secondary);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.25rem;
+  transition: transform 0.15s;
+}
+
+.mtf-chip:hover { transform: translateY(-2px); }
+
+.mtf-chip-label {
+  font-size: 0.65rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--color-text-muted);
+}
+
+.mtf-chip-signal {
+  font-size: 1rem;
+  font-weight: 800;
+  letter-spacing: 0.03em;
+}
+
+.mtf-chip-meta {
+  font-size: 0.7rem;
+  color: var(--color-text-muted);
+}
+
+.mtf-conf-bar {
+  height: 3px;
+  border-radius: 2px;
+  transition: width 0.5s;
+  min-width: 4px;
+}
+
+.mtf-chip .mtf-conf-bar {
+  width: 0;
+  background: var(--color-accent-primary);
+}
+
+.mtf-chip-conf {
+  width: 80%;
+  height: 3px;
+  background: var(--color-bg-tertiary, var(--color-bg-secondary));
+  border-radius: 2px;
+  overflow: hidden;
+}
+
+.mtf-chip-conf-label {
+  font-size: 0.65rem;
+  color: var(--color-text-muted);
+}
+
+.mtf-divider {
+  display: flex;
+  align-items: center;
+  font-size: 1.25rem;
+  color: var(--color-text-muted);
+  flex-shrink: 0;
+  padding: 0 0.125rem;
+}
+
+.mtf-consensus-chip { min-width: 110px; }
+
+.mtf-empty { opacity: 0.5; }
+
+/* ── Cockpit Hero Footer (signal timestamp + countdown) ── */
+.cockpit-hero-footer {
+  width: 100%;       /* full width in flex-wrap context */
+  flex-basis: 100%;  /* force onto new row */
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 0.5rem 0 0;
+  border-top: 1px solid var(--color-border);
+  margin-top: 0.25rem;
+  font-size: 0.75rem;
+  color: var(--color-text-muted);
+  flex-wrap: wrap;
+}
+
+.cockpit-signal-ts {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  opacity: 0.85;
+}
+
+.cockpit-refresh-cd {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  opacity: 0.85;
+}
+
+.cockpit-refresh-cd strong {
+  color: var(--color-accent-primary);
+  font-variant-numeric: tabular-nums;
+  min-width: 2.5ch;
+  display: inline-block;
+}
+
+/* Hero signal stat pill */
+.hero-signal-stat strong {
+  padding: 0.15rem 0.5rem;
+  border-radius: 6px;
+  font-size: 0.8rem;
+}
+
+
+/* ── Overview mini MTF chips ───────────────────────────── */
+.ov-mtf-mini {
+  display: flex;
+  gap: 0.35rem;
+  flex-wrap: wrap;
+  margin: 0.4rem 0;
+}
+
+.ov-mtf-chip {
+  font-size: 0.65rem;
+  font-weight: 700;
+  padding: 0.15rem 0.4rem;
+  border: 1px solid;
+  border-radius: 4px;
+  letter-spacing: 0.03em;
+}

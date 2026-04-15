@@ -1,7 +1,43 @@
+# ── Dependencies ─────────────────────────────────────────────────────
 node_modules/
-.DS_Store
+
+# ── Environment / secrets ─────────────────────────────────────────────
+.env
+.env.local
+.env.production
+
+# ── Database (local data — do NOT commit) ────────────────────────────
+*.db
+*.sqlite
+*.sqlite3
+data/
+
+# ── Session files ─────────────────────────────────────────────────────
+sessions/
+
+# ── Logs ─────────────────────────────────────────────────────────────
+logs/
 *.log
 npm-debug.log*
-.env
+
+# ── PM2 runtime ───────────────────────────────────────────────────────
+.pm2/
+
+# ── OS / editor ───────────────────────────────────────────────────────
+.DS_Store
+Thumbs.db
 .vscode/
 .idea/
+*.swp
+*.swo
+
+# ── Python (ML services) ──────────────────────────────────────────────
+__pycache__/
+*.pyc
+*.pyo
+venv/
+.venv/
+
+# ── Build artefacts ───────────────────────────────────────────────────
+dist/
+build/

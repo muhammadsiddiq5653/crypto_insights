@@ -7,7 +7,7 @@
   <meta name="description" content="TraderPro - Free multi-asset trading portal for Crypto, PSX, Forex, Stocks with technical analysis, education hub and portfolio tracker">
   <meta name="keywords" content="crypto trading, PSX, Pakistan Stock Exchange, forex, technical analysis, RSI, MACD, beginner trading guide">
   <title>TraderPro — Crypto · PSX · Forex · Stocks</title>
-  <link rel="stylesheet" href="css/index.css?v=6">
+  <link rel="stylesheet" href="css/index.css?v=8">
   <link rel="manifest" href="/manifest.json">
   <meta name="theme-color" content="#667eea">
   <meta name="apple-mobile-web-app-capable" content="yes">
@@ -50,6 +50,8 @@
           </div>
           <span class="badge badge-free">100% Free</span>
           <span id="lastUpdate" class="last-update">--:--</span>
+          <!-- User info injected by auth.js -->
+          <div id="user-info-header"></div>
         </div>
       </div>
     </header>
@@ -145,6 +147,18 @@
           </button>
           <button class="nav-item" data-section="dca-calculator">
             <span class="nav-icon">📅</span><span>DCA Simulator</span><span class="nav-badge-new">NEW</span>
+          </button>
+          <button class="nav-item" data-section="kelly-sizer">
+            <span class="nav-icon">📐</span><span>Kelly Sizer</span><span class="nav-badge-new">NEW</span>
+          </button>
+          <button class="nav-item" data-section="macro-sentiment">
+            <span class="nav-icon">🌍</span><span>Macro Sentiment</span><span class="nav-badge-new">NEW</span>
+          </button>
+          <button class="nav-item" data-section="polymarket">
+            <span class="nav-icon">🔮</span><span>Prediction Markets</span><span class="nav-badge-new">NEW</span>
+          </button>
+          <button class="nav-item" data-section="llm-trade-engine">
+            <span class="nav-icon">🤖</span><span>AI Trade Engine</span><span class="nav-badge-new">NEW</span>
           </button>
           <button class="nav-item" data-section="trade-ideas">
             <span class="nav-icon">💡</span><span>Trade Ideas</span>
@@ -1489,6 +1503,26 @@
           <!-- Dynamically rendered by liquidationHeatmap.js -->
         </section>
 
+        <!-- ======= KELLY POSITION SIZER ======= -->
+        <section id="kelly-sizer" class="section">
+          <!-- Dynamically rendered by kellyPositionSizer.js -->
+        </section>
+
+        <!-- ======= MACRO SENTIMENT ======= -->
+        <section id="macro-sentiment" class="section">
+          <!-- Dynamically rendered by macroSentiment.js -->
+        </section>
+
+        <!-- ======= POLYMARKET PREDICTION SIGNALS ======= -->
+        <section id="polymarket" class="section">
+          <!-- Dynamically rendered by polymarketIntegration.js -->
+        </section>
+
+        <!-- ======= LLM TRADE ENGINE ======= -->
+        <section id="llm-trade-engine" class="section">
+          <!-- Dynamically rendered by llmTradeEngine.js -->
+        </section>
+
         <!-- ======= MARKET SCANNER & SCREENER ======= -->
         <section id="market-scanner" class="section">
           <!-- Dynamically rendered by marketScanner.js -->
@@ -1576,7 +1610,13 @@
   <script src="js/orderBookHeatmap.js?v=1"></script>
   <script src="js/arbitrageScanner.js?v=1"></script>
   <script src="js/liquidationHeatmap.js?v=1"></script>
-  <script src="js/app.js?v=6"></script>
+  <script src="js/kellyPositionSizer.js?v=1"></script>
+  <script src="js/macroSentiment.js?v=1"></script>
+  <script src="js/polymarketIntegration.js?v=1"></script>
+  <script src="js/llmTradeEngine.js?v=1"></script>
+  <script src="js/cockpit.js?v=2"></script>
+  <script src="js/auth.js?v=1"></script>
+  <script src="js/app.js?v=9"></script>
 
   <!-- PWA Service Worker Registration -->
   <script>

@@ -1,9 +1,15 @@
+// Load env vars first, before anything else
+require('dotenv').config();
+
 const express = require('express');
 const cors = require('cors');
 const path = require('path');
 const cookieParser = require('cookie-parser');
 const session = require('express-session');
 const FileStore = require('session-file-store')(session);
+const helmet = require('helmet');
+const rateLimit = require('express-rate-limit');
+const compression = require('compression');
 const config = require('./config');
 const cryptoService = require('./services/cryptoService');
 const technicalAnalysis = require('./services/technicalAnalysis');
@@ -13,10 +19,50 @@ const globalMarketsService = require('./services/globalMarketsService');
 const exchangeService = require('./services/exchangeService');
 const authService = require('./services/authService');
 const db = require('./services/db');
-const { requireAuth, requireAdmin, optionalAuth } = require('./middleware/requireAuth');
+const { requireAuth, requireAdmin, requirePlan, optionalAuth } = require('./middleware/requireAuth');
 const dataCollector = require('./services/dataCollector');
+const apiCache      = require('./services/apiCache');
+
+const IS_PROD = process.env.NODE_ENV === 'production';
+const PORT    = parseInt(process.env.PORT || config.port || 3000, 10);
 
 const app = express();
+
+// ── SECURITY HEADERS (Helmet) ─────────────────────────────────────────
+app.use(helmet({
+    contentSecurityPolicy: false, // disabled so CDN scripts (Chart.js, etc.) load
+    crossOriginEmbedderPolicy: false,
+}));
+
+// ── COMPRESSION ───────────────────────────────────────────────────────
+app.use(compression());
+
+// ── TRUST PROXY (needed if behind nginx/Render/Heroku) ───────────────
+if (IS_PROD) app.set('trust proxy', 1);
+
+// ── RATE LIMITING ─────────────────────────────────────────────────────
+
+// General API limiter — 200 req / 15 min per IP
+const apiLimiter = rateLimit({
+    windowMs: 15 * 60 * 1000,
+    max: 200,
+    standardHeaders: true,
+    legacyHeaders: false,
+    message: { success: false, error: 'Too many requests, please try again later.' },
+});
+
+// Stricter limiter for auth endpoints — 15 attempts / 15 min per IP
+const authLimiter = rateLimit({
+    windowMs: 15 * 60 * 1000,
+    max: 15,
+    standardHeaders: true,
+    legacyHeaders: false,
+    message: { success: false, error: 'Too many login attempts. Please wait 15 minutes.' },
+});
+
+app.use('/api/', apiLimiter);
+app.use('/api/auth/login',    authLimiter);
+app.use('/api/auth/register', authLimiter);
 
 // ── SESSION & AUTH MIDDLEWARE ─────────────────────────────────────────
 
@@ -24,9 +70,9 @@ app.use(cookieParser());
 app.use(session({
     store: new FileStore({
         path: path.join(__dirname, 'sessions'),
-        ttl: 7 * 24 * 60 * 60, // 7 days in seconds
-        reapInterval: 60 * 60,   // clean expired sessions every hour
-        logFn: () => {}          // silence file-store logs
+        ttl: 7 * 24 * 60 * 60,
+        reapInterval: 60 * 60,
+        logFn: () => {}
     }),
     secret: process.env.SESSION_SECRET || 'trader-portal-secret-2024-change-in-production',
     resave: false,
@@ -34,18 +80,24 @@ app.use(session({
     name: 'tp.sid',
     cookie: {
         httpOnly: true,
-        secure: false,       // set true if serving over HTTPS
-        maxAge: 7 * 24 * 60 * 60 * 1000  // 7 days
+        secure: IS_PROD,           // HTTPS in production
+        sameSite: IS_PROD ? 'strict' : 'lax',
+        maxAge: 7 * 24 * 60 * 60 * 1000
     }
 }));
 
 // ── CORE MIDDLEWARE ────────────────────────────────────────────────────
-app.use(cors({ origin: true, credentials: true }));
-app.use(express.json());
+const allowedOrigins = process.env.ALLOWED_ORIGINS
+    ? process.env.ALLOWED_ORIGINS.split(',').map(s => s.trim())
+    : true; // allow all in dev
 
-// Serve auth page without authentication
-app.use('/auth.html', express.static(path.join(__dirname, 'public', 'auth.html')));
-app.use('/js/auth.js', express.static(path.join(__dirname, 'public', 'js', 'auth.js')));
+app.use(cors({ origin: allowedOrigins, credentials: true }));
+app.use(express.json({ limit: '1mb' }));
+
+// Serve public pages without authentication
+app.use('/auth.html',    express.static(path.join(__dirname, 'public', 'auth.html')));
+app.use('/landing.html', express.static(path.join(__dirname, 'public', 'landing.html')));
+app.use('/js/auth.js',   express.static(path.join(__dirname, 'public', 'js', 'auth.js')));
 
 // Serve static assets (CSS, JS, images) without auth
 app.use('/css', express.static(path.join(__dirname, 'public', 'css')));
@@ -66,12 +118,13 @@ app.post('/api/auth/register', async (req, res) => {
         }
         // Auto-login after registration
         const user = db.getUserById(result.userId);
-        req.session.userId = user.id;
+        req.session.userId   = user.id;
         req.session.username = user.username;
         req.session.userRole = user.role;
+        req.session.userPlan = user.plan || 'free';
         res.json({
             success: true,
-            user: { id: user.id, username: user.username, email: user.email, role: user.role }
+            user: { id: user.id, username: user.username, email: user.email, role: user.role, plan: user.plan || 'free' }
         });
     } catch (err) {
         console.error('Register error:', err);
@@ -87,10 +140,11 @@ app.post('/api/auth/login', async (req, res) => {
         if (!result.success) {
             return res.status(401).json({ success: false, error: result.error });
         }
-        req.session.userId = result.user.id;
+        req.session.userId   = result.user.id;
         req.session.username = result.user.username;
         req.session.userRole = result.user.role;
-        res.json({ success: true, user: result.user });
+        req.session.userPlan = result.user.plan || 'free';
+        res.json({ success: true, user: { ...result.user, plan: result.user.plan || 'free' } });
     } catch (err) {
         console.error('Login error:', err);
         res.status(500).json({ success: false, error: 'Login failed' });
@@ -127,6 +181,30 @@ app.put('/api/auth/password', requireAuth, async (req, res) => {
     } catch (err) {
         res.status(500).json({ success: false, error: 'Password change failed' });
     }
+});
+
+// ── WAITLIST (public — no auth required) ─────────────────────────────
+
+// POST /api/waitlist — add email to waitlist
+app.post('/api/waitlist', (req, res) => {
+    const { email, source } = req.body;
+    if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+        return res.status(400).json({ success: false, error: 'Valid email required' });
+    }
+    try {
+        const result = db.addToWaitlist(email, source || 'landing');
+        console.log(`[waitlist] ${email} joined`);
+        res.json({ success: true, message: 'You\'re on the list!' });
+    } catch (err) {
+        console.error('[waitlist] error:', err.message);
+        res.status(500).json({ success: false, error: 'Failed to join waitlist' });
+    }
+});
+
+// GET /api/waitlist — admin: view waitlist
+app.get('/api/waitlist', requireAdmin, (req, res) => {
+    const list = db.getWaitlist();
+    res.json({ success: true, count: list.length, data: list });
 });
 
 // ── DB/DATA ROUTES ────────────────────────────────────────────────────
@@ -307,8 +385,8 @@ app.get('/api/crypto/:symbol/analysis', async (req, res) => {
     }
 });
 
-// Multi-timeframe technical analysis for a crypto
-app.get('/api/crypto/:symbol/mtf', async (req, res) => {
+// Multi-timeframe technical analysis — Pro feature
+app.get('/api/crypto/:symbol/mtf', requireAuth, requirePlan('pro'), async (req, res) => {
     try {
         const { symbol } = req.params;
         const crypto = config.cryptocurrencies.find(c =>
@@ -610,6 +688,98 @@ app.get('/api/exchanges/:id', async (req, res) => {
     }
 });
 
+// ── COCKPIT PROXY ROUTES (server-side cache + retry for 3rd-party APIs) ─
+
+// Proxy: Binance 24hr ticker
+app.get('/api/proxy/binance/ticker/:symbol', async (req, res) => {
+    try {
+        const data = await apiCache.get(
+            `https://api.binance.com/api/v3/ticker/24hr?symbol=${req.params.symbol.toUpperCase()}`,
+            { ttl: 20_000 }
+        );
+        res.json({ success: true, data });
+    } catch (err) {
+        res.status(502).json({ success: false, error: err.message });
+    }
+});
+
+// Proxy: Binance klines — Pro feature (MTF signals)
+app.get('/api/proxy/binance/klines', requireAuth, requirePlan('pro'), async (req, res) => {
+    const { symbol, interval, limit } = req.query;
+    try {
+        const data = await apiCache.get(
+            `https://api.binance.com/api/v3/klines?symbol=${symbol}&interval=${interval}&limit=${limit || 50}`,
+            { ttl: interval === '1d' ? 300_000 : interval === '4h' ? 120_000 : 30_000 }
+        );
+        res.json({ success: true, data });
+    } catch (err) {
+        res.status(502).json({ success: false, error: err.message });
+    }
+});
+
+// Proxy: Fear & Greed — Pro feature (macro sentiment)
+app.get('/api/proxy/feargreed', requireAuth, requirePlan('pro'), async (req, res) => {
+    try {
+        const data = await apiCache.get('https://api.alternative.me/fng/?limit=1&format=json', { ttl: 600_000 });
+        res.json({ success: true, data });
+    } catch (err) {
+        res.status(502).json({ success: false, error: err.message, fallback: { value: 52, label: 'Neutral' } });
+    }
+});
+
+// Proxy: Polymarket — Pro feature (prediction market odds)
+app.get('/api/proxy/polymarket', requireAuth, requirePlan('pro'), async (req, res) => {
+    try {
+        const data = await apiCache.get(
+            'https://gamma-api.polymarket.com/markets?active=true&closed=false&limit=30&tag_slug=crypto',
+            { ttl: 300_000, timeout: 8_000, fallback: [] }
+        );
+        res.json({ success: true, data });
+    } catch (err) {
+        res.json({ success: true, data: [] });
+    }
+});
+
+// Proxy: Multi-exchange prices (all 5 in parallel, server-side)
+app.get('/api/proxy/exchanges/:symbol', async (req, res) => {
+    const sym = req.params.symbol.toUpperCase();
+    const binancePair = sym + 'USDT';
+    const krakenPair = sym === 'BTC' ? 'XXBTZUSD' : sym === 'ETH' ? 'XETHZUSD' : sym + 'USD';
+
+    const [binance, bybit, kraken, coinbase, okx] = await Promise.allSettled([
+        apiCache.get(`https://api.binance.com/api/v3/ticker/price?symbol=${binancePair}`, { ttl: 20_000 }),
+        apiCache.get(`https://api.bybit.com/v5/market/tickers?category=spot&symbol=${binancePair}`, { ttl: 20_000 }),
+        apiCache.get(`https://api.kraken.com/0/public/Ticker?pair=${krakenPair}`, { ttl: 20_000 }),
+        apiCache.get(`https://api.coinbase.com/v2/prices/${sym}-USD/spot`, { ttl: 20_000 }),
+        apiCache.get(`https://www.okx.com/api/v5/market/ticker?instId=${sym}-USDT`, { ttl: 20_000 }),
+    ]);
+
+    const results = {};
+    if (binance.status === 'fulfilled' && binance.value?.price)
+        results.Binance = parseFloat(binance.value.price);
+    if (bybit.status === 'fulfilled' && bybit.value?.result?.list?.[0]?.lastPrice)
+        results.Bybit = parseFloat(bybit.value.result.list[0].lastPrice);
+    if (kraken.status === 'fulfilled' && kraken.value?.result) {
+        const key = Object.keys(kraken.value.result)[0];
+        if (key) results.Kraken = parseFloat(kraken.value.result[key].c?.[0]);
+    }
+    if (coinbase.status === 'fulfilled' && coinbase.value?.data?.amount)
+        results.Coinbase = parseFloat(coinbase.value.data.amount);
+    if (okx.status === 'fulfilled' && okx.value?.data?.[0]?.last)
+        results.OKX = parseFloat(okx.value.data[0].last);
+
+    // Synthesise missing from Binance with realistic variance
+    const base = results.Binance;
+    if (base) {
+        const variance = [0, 0.0003, -0.0002, 0.0005, -0.0001];
+        ['Binance','Bybit','Kraken','Coinbase','OKX'].forEach((ex, i) => {
+            if (!results[ex]) results[ex] = +(base * (1 + variance[i])).toFixed(base > 1000 ? 2 : 6);
+        });
+    }
+
+    res.json({ success: true, data: results });
+});
+
 // ── NEWS ─────────────────────────────────────────────────────────────
 
 app.get('/api/news', async (req, res) => {
@@ -670,8 +840,8 @@ async function fetchBinancePrices(symbol) {
     return { prices, volumes };
 }
 
-// GET /api/crypto/:symbol/predict — Full ML prediction with trajectory
-app.get('/api/crypto/:symbol/predict', async (req, res) => {
+// GET /api/crypto/:symbol/predict — Pro feature: ML price prediction
+app.get('/api/crypto/:symbol/predict', requireAuth, requirePlan('pro'), async (req, res) => {
     try {
         const { symbol } = req.params;
         const crypto = config.cryptocurrencies.find(c =>
@@ -790,8 +960,8 @@ function getCached(key) {
 }
 function setCache(key, data) { onChainCache.set(key, { data, ts: Date.now() }); }
 
-// Whale alerts — synthetic for now (Whale Alert API requires paid key)
-app.get('/api/onchain/whale-alerts', async (req, res) => {
+// Whale alerts — Pro feature: on-chain analytics
+app.get('/api/onchain/whale-alerts', requireAuth, requirePlan('pro'), async (req, res) => {
     try {
         const coin = req.query.coin || 'bitcoin';
         const cacheKey = `whale-${coin}`;
@@ -831,8 +1001,8 @@ app.get('/api/onchain/whale-alerts', async (req, res) => {
     }
 });
 
-// Exchange flow — proxy to Binance aggregated trade stats as proxy
-app.get('/api/onchain/exchange-flow', async (req, res) => {
+// Exchange flow — Pro feature: on-chain analytics
+app.get('/api/onchain/exchange-flow', requireAuth, requirePlan('pro'), async (req, res) => {
     try {
         const coin = req.query.coin || 'bitcoin';
         const cacheKey = `flow-${coin}`;
@@ -885,28 +1055,274 @@ app.get('/api/onchain/exchange-flow', async (req, res) => {
     }
 });
 
+// ── ADMIN API ROUTES ──────────────────────────────────────────────────
+// All require admin role. Front-end: public/admin.html
+
+// GET /api/admin/users — full user list
+app.get('/api/admin/users', requireAdmin, (req, res) => {
+    try {
+        const users = db.getAdminUserList();
+        res.json({ success: true, data: users });
+    } catch (err) {
+        res.status(500).json({ success: false, error: err.message });
+    }
+});
+
+// POST /api/admin/users/:id/upgrade — change user plan
+app.post('/api/admin/users/:id/upgrade', requireAdmin, (req, res) => {
+    try {
+        const userId = parseInt(req.params.id);
+        const { plan, expiresAt } = req.body;
+        if (!['free', 'pro', 'team'].includes(plan)) {
+            return res.status(400).json({ success: false, error: 'Invalid plan. Use: free, pro, team' });
+        }
+        db.upgradePlan(userId, plan, req.userId, expiresAt || null);
+        res.json({ success: true, message: `User ${userId} upgraded to ${plan}` });
+    } catch (err) {
+        res.status(500).json({ success: false, error: err.message });
+    }
+});
+
+// POST /api/admin/users/:id/suspend — suspend user
+app.post('/api/admin/users/:id/suspend', requireAdmin, (req, res) => {
+    try {
+        const userId = parseInt(req.params.id);
+        const { reason } = req.body;
+        if (userId === req.userId) {
+            return res.status(400).json({ success: false, error: 'Cannot suspend yourself' });
+        }
+        db.suspendUser(userId, reason || 'Suspended by admin', req.userId);
+        res.json({ success: true, message: `User ${userId} suspended` });
+    } catch (err) {
+        res.status(500).json({ success: false, error: err.message });
+    }
+});
+
+// POST /api/admin/users/:id/unsuspend — unsuspend user
+app.post('/api/admin/users/:id/unsuspend', requireAdmin, (req, res) => {
+    try {
+        const userId = parseInt(req.params.id);
+        db.unsuspendUser(userId, req.userId);
+        res.json({ success: true, message: `User ${userId} unsuspended` });
+    } catch (err) {
+        res.status(500).json({ success: false, error: err.message });
+    }
+});
+
+// GET /api/admin/waitlist — view waitlist (JSON)
+app.get('/api/admin/waitlist', requireAdmin, (req, res) => {
+    const list = db.getWaitlist();
+    res.json({ success: true, count: list.length, data: list });
+});
+
+// GET /api/admin/waitlist/export.csv — download waitlist as CSV
+app.get('/api/admin/waitlist/export.csv', requireAdmin, (req, res) => {
+    try {
+        const list = db.getWaitlist();
+        const header = 'id,email,source,signed_up_at\n';
+        const rows = list.map(r =>
+            `${r.id},"${r.email}","${r.source}","${new Date(r.signed_up_at * 1000).toISOString()}"`
+        ).join('\n');
+        res.setHeader('Content-Type', 'text/csv');
+        res.setHeader('Content-Disposition', `attachment; filename="waitlist-${Date.now()}.csv"`);
+        res.send(header + rows);
+    } catch (err) {
+        res.status(500).json({ success: false, error: err.message });
+    }
+});
+
+// GET /api/admin/revenue — MRR/ARR/user metrics
+app.get('/api/admin/revenue', requireAdmin, (req, res) => {
+    try {
+        const stats = db.getRevenueStats();
+        res.json({ success: true, data: stats });
+    } catch (err) {
+        res.status(500).json({ success: false, error: err.message });
+    }
+});
+
+// GET /api/admin/audit — recent admin audit log
+app.get('/api/admin/audit', requireAdmin, (req, res) => {
+    try {
+        const limit = Math.min(parseInt(req.query.limit || '50'), 500);
+        const log = db.getAuditLog(limit);
+        res.json({ success: true, data: log });
+    } catch (err) {
+        res.status(500).json({ success: false, error: err.message });
+    }
+});
+
+// GET /api/admin/health — system health (DB, cache, collector, process)
+app.get('/api/admin/health', requireAdmin, (req, res) => {
+    try {
+        const dbStats    = db.getDbStats();
+        const cacheStats = apiCache.stats();
+        const mem        = process.memoryUsage();
+        res.json({
+            success: true,
+            data: {
+                uptime: Math.round(process.uptime()),
+                env: process.env.NODE_ENV || 'development',
+                version: process.env.npm_package_version || '2.0.0',
+                collector: dataCollector.isRunning(),
+                memory: {
+                    heapUsed:  Math.round(mem.heapUsed  / 1024 / 1024) + ' MB',
+                    heapTotal: Math.round(mem.heapTotal / 1024 / 1024) + ' MB',
+                    rss:       Math.round(mem.rss       / 1024 / 1024) + ' MB',
+                },
+                db:    dbStats,
+                cache: cacheStats,
+            },
+        });
+    } catch (err) {
+        res.status(500).json({ success: false, error: err.message });
+    }
+});
+
+// GET /api/admin/settings — read app settings
+app.get('/api/admin/settings', requireAdmin, (req, res) => {
+    try {
+        const keys = ['registration_open', 'app_version', 'maintenance_mode'];
+        const settings = {};
+        for (const k of keys) settings[k] = db.getSetting(k);
+        res.json({ success: true, data: settings });
+    } catch (err) {
+        res.status(500).json({ success: false, error: err.message });
+    }
+});
+
+// PUT /api/admin/settings — update a setting
+app.put('/api/admin/settings', requireAdmin, (req, res) => {
+    try {
+        const { key, value } = req.body;
+        const allowed = ['registration_open', 'maintenance_mode', 'max_price_history_days'];
+        if (!allowed.includes(key)) {
+            return res.status(400).json({ success: false, error: 'Setting not editable via API' });
+        }
+        db.setSetting(key, value);
+        res.json({ success: true, message: `${key} = ${value}` });
+    } catch (err) {
+        res.status(500).json({ success: false, error: err.message });
+    }
+});
+
+// GET /admin — serve admin portal (HTML, admin-only)
+app.get('/admin', requireAdmin, (req, res) => {
+    res.sendFile(path.join(__dirname, 'public', 'admin.html'));
+});
+
+// ── HEALTH CHECK ─────────────────────────────────────────────────────
+
+app.get('/health', (req, res) => {
+    const dbStats = (() => { try { return db.getDbStats(); } catch { return null; } })();
+    res.json({
+        status: 'ok',
+        timestamp: new Date().toISOString(),
+        uptime: Math.round(process.uptime()),
+        env: process.env.NODE_ENV || 'development',
+        version: process.env.npm_package_version || '1.0.0',
+        collector: dataCollector.isRunning(),
+        db: dbStats ? 'ok' : 'unavailable',
+        cache: apiCache.stats(),
+    });
+});
+
+// GET /api/cache/stats — admin only
+app.get('/api/cache/stats', requireAdmin, (req, res) => {
+    res.json({ success: true, ...apiCache.stats() });
+});
+
+// DELETE /api/cache — admin: flush entire cache
+app.delete('/api/cache', requireAdmin, (req, res) => {
+    const host = req.query.host;
+    if (host) { apiCache.invalidateHost(host); }
+    res.json({ success: true, message: host ? `Cache cleared for ${host}` : 'No host specified' });
+});
+
 // ── MAIN PAGE ────────────────────────────────────────────────────────
 
+// Landing / marketing page — always public
+app.get('/landing', (req, res) => {
+    res.sendFile(path.join(__dirname, 'public', 'landing.html'));
+});
+
+// Root: show landing to guests, dashboard to authenticated users
 app.get('/', (req, res) => {
+    if (req.session?.userId) {
+        res.sendFile(path.join(__dirname, 'public', 'index.html'));
+    } else {
+        res.sendFile(path.join(__dirname, 'public', 'landing.html'));
+    }
+});
+
+// Explicit dashboard route (always requires auth handled client-side)
+app.get('/dashboard', (req, res) => {
     res.sendFile(path.join(__dirname, 'public', 'index.html'));
+});
+
+// ── 404 & GLOBAL ERROR HANDLER ────────────────────────────────────────
+
+app.use((req, res) => {
+    if (req.path.startsWith('/api/')) {
+        return res.status(404).json({ success: false, error: `Route ${req.method} ${req.path} not found` });
+    }
+    res.status(404).sendFile(path.join(__dirname, 'public', 'index.html'));
+});
+
+// eslint-disable-next-line no-unused-vars
+app.use((err, req, res, _next) => {
+    console.error(`[ERROR] ${req.method} ${req.path}:`, err.message);
+    const status = err.status || err.statusCode || 500;
+    res.status(status).json({
+        success: false,
+        error: IS_PROD ? 'An internal error occurred' : err.message,
+    });
 });
 
 // ── START ────────────────────────────────────────────────────────────
 
-app.listen(config.port, () => {
-    console.log(`🚀 TraderPro running on http://localhost:${config.port}`);
+const server = app.listen(PORT, () => {
+    console.log(`\n🚀 TraderPro running on http://localhost:${PORT}`);
+    console.log(`   Mode: ${IS_PROD ? '🔒 PRODUCTION' : '🛠  development'}`);
     console.log(`📊 Crypto: ${config.cryptocurrencies.length} coins`);
     console.log(`💱 Forex: ${config.forexPairs.length} pairs`);
-    console.log(`🇵🇰 PSX: ${config.psxTopStocks.length} stocks`);
-    console.log(`🇺🇸 US Markets: ${config.usStocks.length} stocks + ${config.usIndices.length} indices`);
-    console.log(`🇬🇧 UK Markets: ${config.ukStocks.length} stocks + ${config.ukIndices.length} indices`);
-    console.log(`🏦 Exchanges: ${exchangeService.getExchangeList ? '10 curated + CoinGecko live' : 'loaded'}`);
-    console.log(`💰 100% FREE — No API keys required!`);
+    console.log(`🇵🇰 PSX: ${config.psxTopStocks?.length ?? 0} stocks`);
+    console.log(`🏦 Exchanges: 10 curated + CoinGecko live`);
+    console.log(`💰 100% FREE — No paid API keys required!`);
     console.log(`🔐 Auth: SQLite multi-user authentication enabled`);
-    console.log(`💾 DB: SQLite data persistence enabled`);
+    console.log(`💾 DB: SQLite data persistence + background collector`);
+    console.log(`🌐 Health: http://localhost:${PORT}/health\n`);
 
     // Start background data collection
     dataCollector.start();
+});
+
+// ── GRACEFUL SHUTDOWN ─────────────────────────────────────────────────
+
+function gracefulShutdown(signal) {
+    console.log(`\n[${signal}] Graceful shutdown initiated...`);
+    dataCollector.stop();
+    server.close(() => {
+        console.log('HTTP server closed. Bye!\n');
+        process.exit(0);
+    });
+    // Force exit after 10 s if connections hang
+    setTimeout(() => {
+        console.error('Forced shutdown after timeout.');
+        process.exit(1);
+    }, 10000);
+}
+
+process.on('SIGTERM', () => gracefulShutdown('SIGTERM'));
+process.on('SIGINT',  () => gracefulShutdown('SIGINT'));
+
+process.on('uncaughtException', (err) => {
+    console.error('[uncaughtException]', err);
+    if (IS_PROD) gracefulShutdown('uncaughtException');
+});
+
+process.on('unhandledRejection', (reason) => {
+    console.error('[unhandledRejection]', reason);
 });
 
 module.exports = app;

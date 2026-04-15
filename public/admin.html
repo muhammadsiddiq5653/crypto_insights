@@ -1,0 +1,740 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>TraderPro · Admin</title>
+<style>
+:root {
+  --bg:       #0d0f14;
+  --surface:  #151820;
+  --surface2: #1c202c;
+  --border:   #252a38;
+  --accent:   #7c6aff;
+  --accent2:  #4fd1c5;
+  --green:    #22c55e;
+  --red:      #ef4444;
+  --amber:    #f59e0b;
+  --text:     #e2e8f0;
+  --muted:    #6b7280;
+  --font:     'Inter', system-ui, sans-serif;
+}
+*{margin:0;padding:0;box-sizing:border-box}
+html,body{height:100%;background:var(--bg);color:var(--text);font-family:var(--font);font-size:14px}
+a{color:var(--accent);text-decoration:none}
+
+/* ── Layout ── */
+.layout{display:flex;height:100vh;overflow:hidden}
+.sidebar{width:220px;flex-shrink:0;background:var(--surface);border-right:1px solid var(--border);display:flex;flex-direction:column;padding:16px 0}
+.main{flex:1;overflow-y:auto;padding:28px 32px}
+
+/* ── Sidebar ── */
+.sb-brand{padding:0 20px 20px;border-bottom:1px solid var(--border);margin-bottom:12px}
+.sb-brand h2{font-size:16px;font-weight:700;color:var(--text)}
+.sb-brand span{font-size:11px;color:var(--muted);background:#1f1060;border-radius:4px;padding:2px 7px;margin-left:6px}
+.sb-nav{list-style:none;padding:0 8px}
+.sb-nav li a{display:flex;align-items:center;gap:10px;padding:9px 12px;border-radius:8px;color:var(--muted);font-size:13px;transition:.15s}
+.sb-nav li a:hover,.sb-nav li a.active{background:var(--surface2);color:var(--text)}
+.sb-nav li a svg{flex-shrink:0}
+.sb-footer{margin-top:auto;padding:16px 20px;border-top:1px solid var(--border);font-size:12px;color:var(--muted)}
+.sb-user{font-weight:600;color:var(--text);margin-bottom:2px}
+
+/* ── Panels ── */
+.panel{display:none}
+.panel.active{display:block}
+.page-title{font-size:22px;font-weight:700;margin-bottom:6px}
+.page-sub{color:var(--muted);margin-bottom:24px;font-size:13px}
+
+/* ── Stat cards ── */
+.stat-row{display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:16px;margin-bottom:28px}
+.stat-card{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:18px 20px}
+.stat-label{font-size:12px;color:var(--muted);margin-bottom:6px;text-transform:uppercase;letter-spacing:.06em}
+.stat-val{font-size:28px;font-weight:700}
+.stat-sub{font-size:12px;color:var(--muted);margin-top:4px}
+.c-green{color:var(--green)}
+.c-amber{color:var(--amber)}
+.c-red{color:var(--red)}
+.c-purple{color:var(--accent)}
+.c-teal{color:var(--accent2)}
+
+/* ── Tables ── */
+.card{background:var(--surface);border:1px solid var(--border);border-radius:12px;overflow:hidden;margin-bottom:24px}
+.card-head{display:flex;align-items:center;justify-content:space-between;padding:16px 20px;border-bottom:1px solid var(--border)}
+.card-head h3{font-size:14px;font-weight:600}
+.card-actions{display:flex;gap:8px;align-items:center}
+.search-input{background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:6px 12px;color:var(--text);font-size:13px;width:200px;outline:none}
+.search-input:focus{border-color:var(--accent)}
+table{width:100%;border-collapse:collapse}
+th{font-size:11px;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);padding:10px 16px;text-align:left;background:var(--surface2);border-bottom:1px solid var(--border)}
+td{padding:11px 16px;border-bottom:1px solid #1a1e2a;font-size:13px;vertical-align:middle}
+tr:last-child td{border-bottom:none}
+tr:hover td{background:#13162080}
+
+/* ── Badges ── */
+.badge{display:inline-block;padding:2px 8px;border-radius:20px;font-size:11px;font-weight:600}
+.badge-free{background:#1e2535;color:#94a3b8}
+.badge-pro{background:#2d1f6e;color:#a78bfa}
+.badge-team{background:#1a2e40;color:#38bdf8}
+.badge-admin{background:#1f1e0a;color:#fbbf24}
+.badge-green{background:#052e16;color:var(--green)}
+.badge-red{background:#1f0e0e;color:var(--red)}
+.badge-amber{background:#1f1a0a;color:var(--amber)}
+
+/* ── Buttons ── */
+.btn{display:inline-flex;align-items:center;gap:6px;padding:7px 14px;border-radius:8px;font-size:12px;font-weight:600;cursor:pointer;border:none;transition:.15s}
+.btn-primary{background:var(--accent);color:#fff}
+.btn-primary:hover{background:#6b59ee}
+.btn-ghost{background:transparent;color:var(--muted);border:1px solid var(--border)}
+.btn-ghost:hover{background:var(--surface2);color:var(--text)}
+.btn-danger{background:#7f1d1d;color:#fca5a5}
+.btn-danger:hover{background:#991b1b}
+.btn-success{background:#052e16;color:var(--green);border:1px solid #16a34a}
+.btn-success:hover{background:#064e1b}
+.btn-sm{padding:4px 10px;font-size:11px}
+
+/* ── Modal ── */
+.modal-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.7);z-index:1000;align-items:center;justify-content:center}
+.modal-overlay.open{display:flex}
+.modal{background:var(--surface);border:1px solid var(--border);border-radius:16px;padding:28px;width:420px;max-width:95vw}
+.modal h3{font-size:16px;font-weight:700;margin-bottom:16px}
+.modal label{display:block;font-size:12px;color:var(--muted);margin-bottom:5px;margin-top:14px}
+.modal select,.modal input,.modal textarea{width:100%;background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:9px 12px;color:var(--text);font-size:13px;outline:none}
+.modal select:focus,.modal input:focus,.modal textarea:focus{border-color:var(--accent)}
+.modal-actions{display:flex;gap:10px;justify-content:flex-end;margin-top:20px}
+.modal textarea{resize:vertical;height:80px}
+
+/* ── Health grid ── */
+.health-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:16px}
+.health-card{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:20px}
+.health-card h4{font-size:13px;font-weight:600;margin-bottom:12px;color:var(--muted);text-transform:uppercase;letter-spacing:.06em}
+.health-row{display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px solid #1a1e2a;font-size:13px}
+.health-row:last-child{border-bottom:none}
+.health-key{color:var(--muted)}
+.health-val{font-weight:600}
+
+/* ── Progress ── */
+.progress-bar{height:6px;background:var(--surface2);border-radius:3px;overflow:hidden;margin-top:4px}
+.progress-fill{height:100%;background:var(--accent);border-radius:3px;transition:.4s}
+
+/* ── Toast ── */
+.toast{position:fixed;bottom:24px;right:24px;background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:12px 18px;font-size:13px;z-index:9999;display:none;gap:10px;align-items:center;box-shadow:0 8px 32px rgba(0,0,0,.4)}
+.toast.show{display:flex}
+.toast.ok{border-color:var(--green);color:var(--green)}
+.toast.err{border-color:var(--red);color:var(--red)}
+
+/* ── Empty states ── */
+.empty{text-align:center;padding:48px 20px;color:var(--muted)}
+.empty svg{margin-bottom:12px;opacity:.4}
+
+/* ── Loading spinner ── */
+.spinner{display:inline-block;width:16px;height:16px;border:2px solid var(--border);border-top-color:var(--accent);border-radius:50%;animation:spin .7s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+
+/* ── Revenue chart placeholder ── */
+.rev-placeholder{background:linear-gradient(135deg,#1a1060,#0a1a30);border-radius:12px;height:160px;display:flex;align-items:center;justify-content:center;color:var(--muted);font-size:13px;margin-bottom:24px}
+
+@media(max-width:768px){
+  .sidebar{width:180px}
+  .main{padding:16px}
+  .stat-row{grid-template-columns:repeat(2,1fr)}
+}
+</style>
+</head>
+<body>
+
+<div class="layout">
+
+  <!-- ── Sidebar ── -->
+  <aside class="sidebar">
+    <div class="sb-brand">
+      <h2>TraderPro <span>Admin</span></h2>
+    </div>
+    <ul class="sb-nav">
+      <li><a href="#" class="active" data-panel="revenue" onclick="showPanel('revenue',this)">
+        <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
+        Revenue
+      </a></li>
+      <li><a href="#" data-panel="users" onclick="showPanel('users',this)">
+        <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+        Users
+      </a></li>
+      <li><a href="#" data-panel="waitlist" onclick="showPanel('waitlist',this)">
+        <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg>
+        Waitlist
+      </a></li>
+      <li><a href="#" data-panel="health" onclick="showPanel('health',this)">
+        <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><rect x="2" y="3" width="20" height="14" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>
+        System Health
+      </a></li>
+      <li><a href="#" data-panel="audit" onclick="showPanel('audit',this)">
+        <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>
+        Audit Log
+      </a></li>
+    </ul>
+    <div class="sb-footer">
+      <div class="sb-user" id="sb-username">Loading...</div>
+      <div>Super Admin</div>
+      <br>
+      <a href="/" style="font-size:12px;color:var(--muted)">← Back to app</a>
+    </div>
+  </aside>
+
+  <!-- ── Main ── -->
+  <main class="main">
+
+    <!-- ══ Revenue Panel ══ -->
+    <div id="panel-revenue" class="panel active">
+      <div class="page-title">Revenue Dashboard</div>
+      <div class="page-sub" id="rev-updated">Loading…</div>
+
+      <div class="stat-row" id="rev-stats">
+        <div class="stat-card"><div class="stat-label">MRR</div><div class="stat-val c-green" id="s-mrr">—</div><div class="stat-sub">Monthly recurring</div></div>
+        <div class="stat-card"><div class="stat-label">ARR</div><div class="stat-val c-green" id="s-arr">—</div><div class="stat-sub">Annual run rate</div></div>
+        <div class="stat-card"><div class="stat-label">Pro Users</div><div class="stat-val c-purple" id="s-pro">—</div><div class="stat-sub">$20/mo each</div></div>
+        <div class="stat-card"><div class="stat-label">Team Users</div><div class="stat-val c-teal" id="s-team">—</div><div class="stat-sub">$49/mo each</div></div>
+        <div class="stat-card"><div class="stat-label">Free Users</div><div class="stat-val" id="s-free">—</div><div class="stat-sub">Conversion targets</div></div>
+        <div class="stat-card"><div class="stat-label">Total Users</div><div class="stat-val" id="s-total">—</div><div class="stat-sub" id="s-new7d">—</div></div>
+        <div class="stat-card"><div class="stat-label">New (30d)</div><div class="stat-val c-amber" id="s-new30d">—</div><div class="stat-sub">Signups this month</div></div>
+        <div class="stat-card"><div class="stat-label">Suspended</div><div class="stat-val c-red" id="s-suspended">—</div><div class="stat-sub">Blocked accounts</div></div>
+      </div>
+
+      <div class="card">
+        <div class="card-head"><h3>Plan Distribution</h3></div>
+        <div style="padding:20px">
+          <div style="margin-bottom:16px">
+            <div style="display:flex;justify-content:space-between;font-size:12px;margin-bottom:6px"><span>Pro</span><span id="dist-pro-pct" class="c-purple">0%</span></div>
+            <div class="progress-bar"><div class="progress-fill" id="dist-pro-bar" style="width:0%;background:var(--accent)"></div></div>
+          </div>
+          <div style="margin-bottom:16px">
+            <div style="display:flex;justify-content:space-between;font-size:12px;margin-bottom:6px"><span>Team</span><span id="dist-team-pct" class="c-teal">0%</span></div>
+            <div class="progress-bar"><div class="progress-fill" id="dist-team-bar" style="width:0%;background:var(--accent2)"></div></div>
+          </div>
+          <div>
+            <div style="display:flex;justify-content:space-between;font-size:12px;margin-bottom:6px"><span>Free</span><span id="dist-free-pct" style="color:var(--muted)">0%</span></div>
+            <div class="progress-bar"><div class="progress-fill" id="dist-free-bar" style="width:0%;background:#374151"></div></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="rev-placeholder">
+        📈 Revenue chart coming soon — integrate Stripe webhooks for historical MRR tracking
+      </div>
+    </div>
+
+    <!-- ══ Users Panel ══ -->
+    <div id="panel-users" class="panel">
+      <div class="page-title">User Management</div>
+      <div class="page-sub">Manage plans, suspend accounts, view activity</div>
+
+      <div class="card">
+        <div class="card-head">
+          <h3>All Users <span id="user-count" style="color:var(--muted);font-weight:400"></span></h3>
+          <div class="card-actions">
+            <input class="search-input" type="text" id="user-search" placeholder="Search users…" oninput="filterUsers()">
+            <button class="btn btn-ghost btn-sm" onclick="loadUsers()">
+              <svg width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg>
+              Refresh
+            </button>
+          </div>
+        </div>
+        <div style="overflow-x:auto">
+          <table>
+            <thead>
+              <tr>
+                <th>ID</th>
+                <th>User</th>
+                <th>Email</th>
+                <th>Plan</th>
+                <th>Role</th>
+                <th>Status</th>
+                <th>Joined</th>
+                <th>Last Login</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody id="user-tbody">
+              <tr><td colspan="9" class="empty">Loading…</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- ══ Waitlist Panel ══ -->
+    <div id="panel-waitlist" class="panel">
+      <div class="page-title">Waitlist</div>
+      <div class="page-sub">Early-bird subscribers — 30% off offer</div>
+
+      <div class="stat-row">
+        <div class="stat-card"><div class="stat-label">Total Signups</div><div class="stat-val c-amber" id="wl-total">—</div><div class="stat-sub">Email waitlist</div></div>
+        <div class="stat-card"><div class="stat-label">Potential MRR</div><div class="stat-val c-green" id="wl-potential">—</div><div class="stat-sub">If all convert to Pro</div></div>
+      </div>
+
+      <div class="card">
+        <div class="card-head">
+          <h3>Waitlist Subscribers</h3>
+          <div class="card-actions">
+            <input class="search-input" type="text" id="wl-search" placeholder="Search emails…" oninput="filterWaitlist()">
+            <a class="btn btn-primary btn-sm" href="/api/admin/waitlist/export.csv" target="_blank">
+              <svg width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+              Export CSV
+            </a>
+          </div>
+        </div>
+        <div style="overflow-x:auto">
+          <table>
+            <thead>
+              <tr><th>#</th><th>Email</th><th>Source</th><th>Signed Up</th></tr>
+            </thead>
+            <tbody id="wl-tbody">
+              <tr><td colspan="4" class="empty">Loading…</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- ══ System Health Panel ══ -->
+    <div id="panel-health" class="panel">
+      <div class="page-title">System Health</div>
+      <div class="page-sub" id="health-updated">Loading…</div>
+
+      <div class="health-grid" id="health-grid">
+        <div class="health-card"><div style="text-align:center;padding:20px"><div class="spinner"></div></div></div>
+      </div>
+    </div>
+
+    <!-- ══ Audit Log Panel ══ -->
+    <div id="panel-audit" class="panel">
+      <div class="page-title">Audit Log</div>
+      <div class="page-sub">Admin actions — who did what and when</div>
+
+      <div class="card">
+        <div class="card-head">
+          <h3>Recent Admin Actions</h3>
+          <button class="btn btn-ghost btn-sm" onclick="loadAudit()">Refresh</button>
+        </div>
+        <div style="overflow-x:auto">
+          <table>
+            <thead><tr><th>Time</th><th>Admin</th><th>Action</th><th>Target ID</th><th>Details</th></tr></thead>
+            <tbody id="audit-tbody"><tr><td colspan="5" class="empty">Loading…</td></tr></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+  </main>
+</div>
+
+<!-- ── Upgrade User Modal ── -->
+<div class="modal-overlay" id="modal-upgrade">
+  <div class="modal">
+    <h3>Change Plan</h3>
+    <input type="hidden" id="up-userId">
+    <label>User</label>
+    <input type="text" id="up-username" readonly style="opacity:.6">
+    <label>Plan</label>
+    <select id="up-plan">
+      <option value="free">Free</option>
+      <option value="pro">Pro ($20/mo)</option>
+      <option value="team">Team ($49/mo)</option>
+    </select>
+    <label>Expires (optional, UTC — leave blank = indefinite)</label>
+    <input type="datetime-local" id="up-expires">
+    <div class="modal-actions">
+      <button class="btn btn-ghost" onclick="closeModal('modal-upgrade')">Cancel</button>
+      <button class="btn btn-primary" onclick="submitUpgrade()">Save Plan</button>
+    </div>
+  </div>
+</div>
+
+<!-- ── Suspend User Modal ── -->
+<div class="modal-overlay" id="modal-suspend">
+  <div class="modal">
+    <h3 id="suspend-title">Suspend User</h3>
+    <input type="hidden" id="sus-userId">
+    <input type="hidden" id="sus-action">
+    <label>User</label>
+    <input type="text" id="sus-username" readonly style="opacity:.6">
+    <label id="sus-reason-label">Reason</label>
+    <textarea id="sus-reason" placeholder="Why are you suspending this account?"></textarea>
+    <div class="modal-actions">
+      <button class="btn btn-ghost" onclick="closeModal('modal-suspend')">Cancel</button>
+      <button class="btn btn-danger" id="sus-confirm-btn" onclick="submitSuspend()">Suspend</button>
+    </div>
+  </div>
+</div>
+
+<!-- Toast -->
+<div class="toast" id="toast"></div>
+
+<script>
+'use strict';
+
+// ── State ──────────────────────────────────────────────────────────────
+let allUsers     = [];
+let allWaitlist  = [];
+let currentAdmin = null;
+
+// ── Init ───────────────────────────────────────────────────────────────
+(async function init() {
+  // Verify admin session
+  try {
+    const r = await fetch('/api/auth/me');
+    if (!r.ok) { window.location.href = '/'; return; }
+    const { user } = await r.json();
+    if (!user || user.role !== 'admin') { window.location.href = '/'; return; }
+    currentAdmin = user;
+    document.getElementById('sb-username').textContent = user.username;
+  } catch {
+    window.location.href = '/';
+    return;
+  }
+
+  loadRevenue();
+  loadUsers();
+  loadWaitlist();
+})();
+
+// ── Panel switching ────────────────────────────────────────────────────
+function showPanel(name, el) {
+  document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.sb-nav a').forEach(a => a.classList.remove('active'));
+  document.getElementById('panel-' + name).classList.add('active');
+  el.classList.add('active');
+
+  if (name === 'health') loadHealth();
+  if (name === 'audit')  loadAudit();
+}
+
+// ── Revenue ────────────────────────────────────────────────────────────
+async function loadRevenue() {
+  try {
+    const r   = await fetch('/api/admin/revenue');
+    const res = await r.json();
+    if (!res.success) return;
+    const d = res.data;
+
+    document.getElementById('s-mrr').textContent  = '$' + d.MRR.toLocaleString();
+    document.getElementById('s-arr').textContent  = '$' + d.ARR.toLocaleString();
+    document.getElementById('s-pro').textContent  = d.proUsers;
+    document.getElementById('s-team').textContent = d.teamUsers;
+    document.getElementById('s-free').textContent = d.freeUsers;
+    document.getElementById('s-total').textContent = d.totalUsers;
+    document.getElementById('s-new7d').textContent = `+${d.newUsers7d} this week`;
+    document.getElementById('s-new30d').textContent = d.newUsers30d;
+    document.getElementById('s-suspended').textContent = d.suspendedUsers;
+    document.getElementById('rev-updated').textContent =
+      'Last updated: ' + new Date().toLocaleTimeString();
+
+    // Distribution bars
+    const total = d.totalUsers || 1;
+    const proPct  = Math.round(d.proUsers  / total * 100);
+    const teamPct = Math.round(d.teamUsers / total * 100);
+    const freePct = Math.round(d.freeUsers / total * 100);
+    document.getElementById('dist-pro-pct').textContent  = proPct  + '%';
+    document.getElementById('dist-team-pct').textContent = teamPct + '%';
+    document.getElementById('dist-free-pct').textContent = freePct + '%';
+    document.getElementById('dist-pro-bar').style.width  = proPct  + '%';
+    document.getElementById('dist-team-bar').style.width = teamPct + '%';
+    document.getElementById('dist-free-bar').style.width = freePct + '%';
+  } catch (e) {
+    console.error('Revenue load error', e);
+  }
+}
+
+// ── Users ──────────────────────────────────────────────────────────────
+async function loadUsers() {
+  try {
+    const r   = await fetch('/api/admin/users');
+    const res = await r.json();
+    if (!res.success) return;
+    allUsers = res.data;
+    document.getElementById('user-count').textContent = `(${allUsers.length})`;
+    renderUsers(allUsers);
+  } catch (e) {
+    console.error('Users load error', e);
+  }
+}
+
+function filterUsers() {
+  const q = document.getElementById('user-search').value.toLowerCase();
+  renderUsers(allUsers.filter(u =>
+    u.username.toLowerCase().includes(q) ||
+    u.email.toLowerCase().includes(q) ||
+    u.plan.includes(q)
+  ));
+}
+
+function renderUsers(users) {
+  const tbody = document.getElementById('user-tbody');
+  if (!users.length) {
+    tbody.innerHTML = '<tr><td colspan="9" class="empty">No users found</td></tr>';
+    return;
+  }
+  tbody.innerHTML = users.map(u => {
+    const joined    = u.created_at  ? fmtDate(u.created_at)  : '—';
+    const lastLogin = u.last_login  ? fmtDate(u.last_login)  : 'Never';
+    const planBadge = `<span class="badge badge-${u.plan}">${u.plan}</span>`;
+    const roleBadge = u.role === 'admin'
+      ? `<span class="badge badge-admin">admin</span>`
+      : `<span class="badge badge-free">user</span>`;
+    const statusBadge = u.suspended
+      ? `<span class="badge badge-red">Suspended</span>`
+      : `<span class="badge badge-green">Active</span>`;
+    const isSelf = u.id === currentAdmin?.id;
+    return `<tr>
+      <td style="color:var(--muted)">${u.id}</td>
+      <td><strong>${esc(u.username)}</strong></td>
+      <td style="color:var(--muted)">${esc(u.email)}</td>
+      <td>${planBadge}</td>
+      <td>${roleBadge}</td>
+      <td>${statusBadge}</td>
+      <td style="color:var(--muted)">${joined}</td>
+      <td style="color:var(--muted)">${lastLogin}</td>
+      <td>
+        <div style="display:flex;gap:6px">
+          ${!isSelf ? `<button class="btn btn-ghost btn-sm" onclick="openUpgrade(${u.id},'${esc(u.username)}','${u.plan}')">Plan</button>` : ''}
+          ${!isSelf && !u.suspended ? `<button class="btn btn-danger btn-sm" onclick="openSuspend(${u.id},'${esc(u.username)}','suspend')">Suspend</button>` : ''}
+          ${!isSelf && u.suspended  ? `<button class="btn btn-success btn-sm" onclick="openSuspend(${u.id},'${esc(u.username)}','unsuspend')">Restore</button>` : ''}
+        </div>
+      </td>
+    </tr>`;
+  }).join('');
+}
+
+// ── Waitlist ───────────────────────────────────────────────────────────
+async function loadWaitlist() {
+  try {
+    const r   = await fetch('/api/admin/waitlist');
+    const res = await r.json();
+    if (!res.success) return;
+    allWaitlist = res.data;
+    document.getElementById('wl-total').textContent = allWaitlist.length;
+    document.getElementById('wl-potential').textContent = '$' + (allWaitlist.length * 14).toLocaleString() + '/mo';
+    renderWaitlist(allWaitlist);
+  } catch (e) {
+    console.error('Waitlist load error', e);
+  }
+}
+
+function filterWaitlist() {
+  const q = document.getElementById('wl-search').value.toLowerCase();
+  renderWaitlist(allWaitlist.filter(w =>
+    w.email.toLowerCase().includes(q) || (w.source || '').includes(q)
+  ));
+}
+
+function renderWaitlist(list) {
+  const tbody = document.getElementById('wl-tbody');
+  if (!list.length) {
+    tbody.innerHTML = '<tr><td colspan="4" class="empty">No waitlist entries</td></tr>';
+    return;
+  }
+  tbody.innerHTML = list.map((w, i) => `<tr>
+    <td style="color:var(--muted)">${i + 1}</td>
+    <td>${esc(w.email)}</td>
+    <td><span class="badge badge-free">${esc(w.source || 'landing')}</span></td>
+    <td style="color:var(--muted)">${fmtDate(w.signed_up_at)}</td>
+  </tr>`).join('');
+}
+
+// ── Health ─────────────────────────────────────────────────────────────
+async function loadHealth() {
+  try {
+    const r   = await fetch('/api/admin/health');
+    const res = await r.json();
+    if (!res.success) return;
+    const d = res.data;
+    document.getElementById('health-updated').textContent = 'Updated: ' + new Date().toLocaleTimeString();
+    renderHealth(d);
+  } catch (e) {
+    document.getElementById('health-grid').innerHTML =
+      '<div class="health-card"><div class="empty">Failed to load health data</div></div>';
+  }
+}
+
+function renderHealth(d) {
+  const grid = document.getElementById('health-grid');
+  const appDb    = d.db?.app    || {};
+  const marketDb = d.db?.market || {};
+
+  grid.innerHTML = `
+    <div class="health-card">
+      <h4>Process</h4>
+      ${hRow('Uptime', fmtUptime(d.uptime))}
+      ${hRow('Environment', d.env)}
+      ${hRow('Version', d.version)}
+      ${hRow('Collector', d.collector ? '<span class="c-green">Running</span>' : '<span class="c-amber">Stopped</span>')}
+    </div>
+    <div class="health-card">
+      <h4>Memory</h4>
+      ${hRow('Heap Used',  d.memory?.heapUsed  || '—')}
+      ${hRow('Heap Total', d.memory?.heapTotal || '—')}
+      ${hRow('RSS',        d.memory?.rss       || '—')}
+    </div>
+    <div class="health-card">
+      <h4>App DB (users/auth)</h4>
+      ${hRow('Users',     appDb.users ?? '—')}
+      ${hRow('Waitlist',  appDb.waitlist ?? '—')}
+      ${hRow('Audit Log', appDb.admin_audit_log ?? '—')}
+      ${hRow('File', appDb._file ? '<span style="font-size:11px;color:var(--muted)">app.db</span>' : '—')}
+    </div>
+    <div class="health-card">
+      <h4>Market DB (data)</h4>
+      ${hRow('Price History',  marketDb.price_history ?? '—')}
+      ${hRow('Trade Signals',  marketDb.trade_signals ?? '—')}
+      ${hRow('News Cache',     marketDb.news_cache ?? '—')}
+      ${hRow('Kline Cache',    marketDb.kline_cache ?? '—')}
+      ${hRow('Arbitrage Log',  marketDb.arbitrage_log ?? '—')}
+    </div>
+    <div class="health-card">
+      <h4>API Cache</h4>
+      ${hRow('Cached Entries',  d.cache?.size ?? '—')}
+      ${hRow('In-flight',       d.cache?.inflight ?? '—')}
+      ${hRow('Hosts on Cooldown', d.cache?.hostCooldowns ?? '—')}
+    </div>
+  `;
+}
+
+function hRow(k, v) {
+  return `<div class="health-row"><span class="health-key">${k}</span><span class="health-val">${v}</span></div>`;
+}
+
+// ── Audit Log ─────────────────────────────────────────────────────────
+async function loadAudit() {
+  try {
+    const r   = await fetch('/api/admin/audit?limit=100');
+    const res = await r.json();
+    if (!res.success) return;
+    const tbody = document.getElementById('audit-tbody');
+    if (!res.data.length) {
+      tbody.innerHTML = '<tr><td colspan="5" class="empty">No admin actions recorded yet</td></tr>';
+      return;
+    }
+    tbody.innerHTML = res.data.map(a => `<tr>
+      <td style="color:var(--muted)">${fmtDate(a.ts)}</td>
+      <td><strong>${esc(a.admin_username || 'admin')}</strong></td>
+      <td><span class="badge badge-amber">${esc(a.action)}</span></td>
+      <td style="color:var(--muted)">${a.target_id ?? '—'}</td>
+      <td style="color:var(--muted);font-size:12px">${a.details ? esc(a.details).slice(0, 80) : '—'}</td>
+    </tr>`).join('');
+  } catch (e) {
+    console.error('Audit load error', e);
+  }
+}
+
+// ── Upgrade Modal ──────────────────────────────────────────────────────
+function openUpgrade(id, username, plan) {
+  document.getElementById('up-userId').value   = id;
+  document.getElementById('up-username').value = username;
+  document.getElementById('up-plan').value     = plan;
+  document.getElementById('up-expires').value  = '';
+  document.getElementById('modal-upgrade').classList.add('open');
+}
+
+async function submitUpgrade() {
+  const id      = document.getElementById('up-userId').value;
+  const plan    = document.getElementById('up-plan').value;
+  const expires = document.getElementById('up-expires').value;
+  const expiresAt = expires ? Math.floor(new Date(expires).getTime() / 1000) : null;
+
+  try {
+    const r   = await fetch(`/api/admin/users/${id}/upgrade`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ plan, expiresAt }),
+    });
+    const res = await r.json();
+    if (!res.success) return showToast(res.error, 'err');
+    closeModal('modal-upgrade');
+    showToast(`Plan updated to ${plan}`, 'ok');
+    await Promise.all([loadUsers(), loadRevenue()]);
+  } catch (e) {
+    showToast('Request failed', 'err');
+  }
+}
+
+// ── Suspend Modal ──────────────────────────────────────────────────────
+function openSuspend(id, username, action) {
+  document.getElementById('sus-userId').value    = id;
+  document.getElementById('sus-action').value    = action;
+  document.getElementById('sus-username').value  = username;
+  document.getElementById('suspend-title').textContent = action === 'suspend' ? 'Suspend User' : 'Restore User';
+  document.getElementById('sus-reason-label').style.display = action === 'suspend' ? 'block' : 'none';
+  document.getElementById('sus-reason').style.display       = action === 'suspend' ? 'block' : 'none';
+  document.getElementById('sus-confirm-btn').textContent    = action === 'suspend' ? 'Suspend' : 'Restore';
+  document.getElementById('sus-confirm-btn').className      = action === 'suspend' ? 'btn btn-danger' : 'btn btn-success';
+  document.getElementById('sus-reason').value = '';
+  document.getElementById('modal-suspend').classList.add('open');
+}
+
+async function submitSuspend() {
+  const id     = document.getElementById('sus-userId').value;
+  const action = document.getElementById('sus-action').value;
+  const reason = document.getElementById('sus-reason').value;
+  const endpoint = action === 'suspend'
+    ? `/api/admin/users/${id}/suspend`
+    : `/api/admin/users/${id}/unsuspend`;
+
+  try {
+    const r   = await fetch(endpoint, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ reason }),
+    });
+    const res = await r.json();
+    if (!res.success) return showToast(res.error, 'err');
+    closeModal('modal-suspend');
+    showToast(action === 'suspend' ? 'User suspended' : 'User restored', 'ok');
+    loadUsers();
+  } catch (e) {
+    showToast('Request failed', 'err');
+  }
+}
+
+// ── Modal helpers ──────────────────────────────────────────────────────
+function closeModal(id) {
+  document.getElementById(id).classList.remove('open');
+}
+document.querySelectorAll('.modal-overlay').forEach(m => {
+  m.addEventListener('click', e => { if (e.target === m) m.classList.remove('open'); });
+});
+
+// ── Toast ──────────────────────────────────────────────────────────────
+let _toastTimer;
+function showToast(msg, type = 'ok') {
+  const el = document.getElementById('toast');
+  el.textContent = msg;
+  el.className = `toast show ${type}`;
+  clearTimeout(_toastTimer);
+  _toastTimer = setTimeout(() => { el.classList.remove('show'); }, 3500);
+}
+
+// ── Helpers ────────────────────────────────────────────────────────────
+function fmtDate(unixTs) {
+  if (!unixTs) return '—';
+  return new Date(unixTs * 1000).toLocaleDateString('en-GB', {
+    day: '2-digit', month: 'short', year: 'numeric',
+  });
+}
+
+function fmtUptime(seconds) {
+  const d = Math.floor(seconds / 86400);
+  const h = Math.floor((seconds % 86400) / 3600);
+  const m = Math.floor((seconds % 3600) / 60);
+  if (d > 0) return `${d}d ${h}h`;
+  if (h > 0) return `${h}h ${m}m`;
+  return `${m}m`;
+}
+
+function esc(str) {
+  return String(str || '')
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;');
+}
+</script>
+</body>
+</html>

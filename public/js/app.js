@@ -17,6 +17,16 @@ const state = {
 async function initApp() {
     console.log('🚀 Initialising TraderPro...');
 
+    // ── Auth check ─────────────────────────────────────────────────────
+    // Redirect to login page if no active session
+    if (typeof AuthUtils !== 'undefined') {
+        const user = await AuthUtils.requireLogin();
+        if (!user) return; // redirecting
+        AuthUtils.renderUserInfo(user, 'user-info-header');
+        // Store user in state
+        state.currentUser = user;
+    }
+
     try {
         // Init ticker bar first (non-blocking, shows at top immediately)
         if (typeof initTickerBar === 'function') initTickerBar();
@@ -43,8 +53,9 @@ async function initApp() {
         // Load global indices for dashboard tiles (non-blocking)
         if (typeof loadGlobalIndices === 'function') loadGlobalIndices();
 
-        // Init dashboard widgets (non-blocking)
-        if (typeof initDashboardWidgets === 'function') initDashboardWidgets();
+        // Init Trading Cockpit (primary landing experience)
+        if (typeof TradingCockpit !== 'undefined') TradingCockpit.init();
+        else if (typeof initDashboardWidgets === 'function') initDashboardWidgets();
 
         startAutoUpdate();
         updateLastUpdateTime();
@@ -115,7 +126,10 @@ function switchSection(sectionName) {
             case 'exchanges':           if (typeof initExchanges === 'function') initExchanges(); break;
             case 'trade-ideas':         if (typeof initTradeIdeas === 'function') initTradeIdeas(); break;
             case 'export-center':       if (typeof initExportCenter === 'function') initExportCenter(); break;
-            case 'dashboard':           if (typeof initDashboardWidgets === 'function') initDashboardWidgets(); break;
+            case 'dashboard':
+              if (typeof TradingCockpit !== 'undefined') TradingCockpit.init();
+              else if (typeof initDashboardWidgets === 'function') initDashboardWidgets();
+              break;
             case 'mtf':                 if (typeof initMTF === 'function') initMTF(); break;
             case 'correlation':         if (typeof initCorrelation === 'function') initCorrelation(); break;
             case 'ai-coach':            if (typeof initAICoach === 'function') initAICoach(); break;
@@ -131,6 +145,10 @@ function switchSection(sectionName) {
             case 'order-book-heatmap':  if (typeof OrderBookHeatmap !== 'undefined' && OrderBookHeatmap.init) OrderBookHeatmap.init(); break;
             case 'arbitrage-scanner':   if (typeof ArbitrageScanner !== 'undefined' && ArbitrageScanner.init) ArbitrageScanner.init(); break;
             case 'liquidation-heatmap': if (typeof LiquidationHeatmap !== 'undefined' && LiquidationHeatmap.init) LiquidationHeatmap.init(); break;
+            case 'kelly-sizer':         if (typeof KellyPositionSizer !== 'undefined' && KellyPositionSizer.init) KellyPositionSizer.init(); break;
+            case 'macro-sentiment':     if (typeof MacroSentiment !== 'undefined' && MacroSentiment.init) MacroSentiment.init(); break;
+            case 'polymarket':          if (typeof PolymarketIntegration !== 'undefined' && PolymarketIntegration.init) PolymarketIntegration.init(); break;
+            case 'llm-trade-engine':    if (typeof LLMTradeEngine !== 'undefined' && LLMTradeEngine.init) LLMTradeEngine.init(); break;
             case 'market-scanner':      if (typeof MarketScanner !== 'undefined' && MarketScanner.init) MarketScanner.init(); break;
             case 'algo-strategies':     if (typeof AlgoStrategies !== 'undefined' && AlgoStrategies.init) AlgoStrategies.init(); break;
             case 'ai-trading':          if (typeof AITrading !== 'undefined' && AITrading.init) AITrading.init(); break;
@@ -182,6 +200,13 @@ async function loadDashboard() {
 
         // Cache prices for alerts
         prices.forEach(p => { state.cryptoPriceCache[p.symbol] = p.price; });
+
+        // Update cockpit coin pill prices
+        if (typeof TradingCockpit !== 'undefined' && TradingCockpit.updatePillPrices) {
+            const priceMap = {};
+            prices.forEach(p => { priceMap[p.symbol] = p.price; });
+            TradingCockpit.updatePillPrices(priceMap);
+        }
 
         // Update summary tiles
         updateSummaryTiles(prices);
