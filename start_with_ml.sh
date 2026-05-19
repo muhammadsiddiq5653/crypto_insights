@@ -1,61 +1,73 @@
 #!/bin/bash
-# TraderPro — Start Node.js server + ML Prediction Engine + AutoTrade Engine
-# Usage: bash start_with_ml.sh
+# TraderPro — Start all three services for local development
+#
+# For production use PM2 instead:
+#   pm2 start ecosystem.config.js --env production
+#   pm2 save && pm2 startup
+#
+# Usage (dev only): bash start_with_ml.sh
 
-echo "🚀 Starting TraderPro with ML + AutoTrade Engines..."
+set -e
+echo "🚀 Starting TraderPro (dev mode — all 3 services)..."
 echo ""
 
-# Check Python
-if ! command -v python3 &> /dev/null; then
-  echo "❌ Python3 not found. Install it from https://www.python.org"
+mkdir -p logs
+
+# ── Check Python ──────────────────────────────────────────────────────────────
+if ! command -v python3 &>/dev/null; then
+  echo "❌ Python3 not found. Install from https://www.python.org"
   exit 1
 fi
 
-# Install Python deps if needed
+# ── Install Python deps if missing ───────────────────────────────────────────
 echo "📦 Checking Python dependencies..."
-python3 -c "import flask, sklearn, pandas, numpy, backtesting, ta, ccxt" 2>/dev/null || {
-  echo "Installing dependencies (one-time setup, ~60 seconds)..."
-  pip3 install flask flask-cors scikit-learn pandas numpy backtesting ta ccxt python-dotenv --quiet --break-system-packages
+python3 -c "import flask, sklearn, pandas, numpy, gunicorn" 2>/dev/null || {
+  echo "   Installing dependencies from requirements.txt (one-time, ~90s)..."
+  pip3 install -r requirements.txt --quiet
 }
-echo "✅ Dependencies ready"
+echo "✅ Python dependencies ready"
 echo ""
 
-# ── Kill existing processes on all three ports ────────────────────────────────
-
-for PORT in 5001 5002 3000; do
-  EXISTING=$(lsof -ti tcp:$PORT 2>/dev/null)
-  if [ -n "$EXISTING" ]; then
-    echo "   Stopping existing process on port $PORT (PID $EXISTING)..."
-    kill $EXISTING 2>/dev/null
-    sleep 0.5
+# ── Stop anything already running on these ports ─────────────────────────────
+for PORT in 3000 5001 5002; do
+  PIDS=$(lsof -ti tcp:$PORT 2>/dev/null || true)
+  if [ -n "$PIDS" ]; then
+    echo "   Stopping existing process on port $PORT..."
+    kill $PIDS 2>/dev/null || true
+    sleep 0.3
   fi
 done
 
-# ── Start ML Prediction Engine (port 5001) ────────────────────────────────────
-echo "🤖 Starting ML Prediction Engine on port 5001..."
-python3 predict_service.py &
+# ── Start ML Prediction Engine via gunicorn (port 5001) ──────────────────────
+echo "🤖 Starting ML Prediction Engine on :5001..."
+gunicorn --workers 2 --bind 0.0.0.0:5001 --timeout 120 predict_service:app \
+  &> ./logs/ml-out.log &
 ML_PID=$!
-echo "   ML Engine PID: $ML_PID"
 
-# ── Start AutoTrade Engine (port 5002) ────────────────────────────────────────
-echo "⚙️  Starting AutoTrade Engine on port 5002..."
-python3 autotrade_service.py &
+# ── Start AutoTrade Engine via gunicorn (port 5002) ──────────────────────────
+echo "⚡ Starting AutoTrade Engine on :5002..."
+gunicorn --workers 2 --bind 127.0.0.1:5002 --timeout 180 autotrade_service:app \
+  &> ./logs/at-out.log &
 AT_PID=$!
-echo "   AutoTrade Engine PID: $AT_PID"
 
-# Wait for Python services to start
-sleep 2
+# Give gunicorn workers a moment to bind and load models
+sleep 3
 
-# Verify services
-lsof -ti tcp:5001 &>/dev/null && echo "   ✅ ML Engine listening on port 5001" || echo "   ⚠️  ML Engine may not have started"
-lsof -ti tcp:5002 &>/dev/null && echo "   ✅ AutoTrade Engine listening on port 5002" || echo "   ⚠️  AutoTrade Engine may not have started"
+# ── Verify services started ───────────────────────────────────────────────────
+lsof -ti tcp:5001 &>/dev/null \
+  && echo "   ✅ ML Engine ready on :5001" \
+  || echo "   ⚠️  ML Engine may not have started — check logs/ml-out.log"
+lsof -ti tcp:5002 &>/dev/null \
+  && echo "   ✅ AutoTrade Engine ready on :5002" \
+  || echo "   ⚠️  AutoTrade Engine may not have started — check logs/at-out.log"
 
-# ── Start Node.js server (foreground) ─────────────────────────────────────────
 echo ""
 echo "🌐 Starting TraderPro on http://localhost:3000"
+echo "   Logs: logs/ml-out.log · logs/at-out.log"
 echo "   Press Ctrl+C to stop all servers."
 echo ""
 
-trap "echo ''; echo '🛑 Stopping all servers...'; kill $ML_PID $AT_PID 2>/dev/null; exit 0" INT TERM EXIT
+# ── Shutdown hook ─────────────────────────────────────────────────────────────
+trap 'echo ""; echo "🛑 Stopping all servers..."; kill $ML_PID $AT_PID 2>/dev/null; exit 0' INT TERM EXIT
 
 npm start

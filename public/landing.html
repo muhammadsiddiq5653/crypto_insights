@@ -4,30 +4,73 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>TraderPro — The All-In-One Crypto Intelligence Portal</title>
-  <meta name="description" content="Real-time crypto prices, multi-timeframe signals, AI trade engine, Kelly position sizer, Polymarket odds, and more. One dashboard. $20/month." />
+  <meta name="description" content="Signal Command Center, 3-agent AI council, live backtester, trade journal, portfolio tracker with Binance sync, smart Slack alerts — one dashboard. $20/month." />
   <meta property="og:title" content="TraderPro — Crypto Intelligence Portal" />
-  <meta property="og:description" content="The dashboard serious traders actually use. Multi-timeframe signals, AI reasoning, exchange arbitrage, and Polymarket odds — all in one place. From $20/mo." />
+  <meta property="og:description" content="The complete crypto trading OS. Command Center signals, AI Agent Council, strategy backtester, trade journal, portfolio tracker, Slack alerts, Binance sync — all in one place. From $20/mo." />
   <link rel="icon" href="/icons/icon-192.png" />
   <style>
     /* ── Reset & tokens ───────────────────────────────────────────── */
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
     :root {
-      --bg:       #0a0c10;
-      --bg2:      #111418;
-      --bg3:      #181c22;
+      --bg:       #060810;
+      --bg2:      #0d1117;
+      --bg3:      #141820;
       --border:   rgba(255,255,255,0.07);
       --text:     #e8eaf0;
       --muted:    #8892a4;
-      --accent:   #6478dc;
-      --accent2:  #9945ff;
-      --green:    #2dd882;
-      --red:      #ff5f57;
-      --gold:     #f59e0b;
+      --accent:   #5b72ff;
+      --accent2:  #a855f7;
+      --green:    #00e87a;
+      --red:      #ff4444;
+      --gold:     #fbbf24;
+      --cyan:     #00d4ff;
       --radius:   12px;
       --radius-lg:20px;
     }
     html { scroll-behavior: smooth; }
     body { background: var(--bg); color: var(--text); font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif; line-height: 1.6; overflow-x: hidden; }
+
+    /* ── Particle canvas ─────────────────────────────────────────────── */
+    #particle-canvas {
+      position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+      pointer-events: none; z-index: 0; opacity: 0.35;
+    }
+    body > *:not(#particle-canvas) { position: relative; z-index: 1; }
+
+    /* ── Global glow keyframes ───────────────────────────────────────── */
+    @keyframes glow-pulse {
+      0%, 100% { box-shadow: 0 0 6px rgba(91,114,255,0.3), 0 0 20px rgba(91,114,255,0.1); }
+      50%       { box-shadow: 0 0 14px rgba(91,114,255,0.7), 0 0 40px rgba(91,114,255,0.25); }
+    }
+    @keyframes glow-green {
+      0%, 100% { box-shadow: 0 0 6px rgba(0,232,122,0.3); }
+      50%       { box-shadow: 0 0 18px rgba(0,232,122,0.7), 0 0 40px rgba(0,232,122,0.2); }
+    }
+    @keyframes float-up {
+      0%, 100% { transform: translateY(0px); }
+      50%       { transform: translateY(-8px); }
+    }
+    @keyframes scan-line {
+      0%   { transform: translateY(-100%); opacity: 0; }
+      10%  { opacity: 1; }
+      90%  { opacity: 1; }
+      100% { transform: translateY(600%); opacity: 0; }
+    }
+    @keyframes neon-flicker {
+      0%,19%,21%,23%,25%,54%,56%,100% { opacity: 1; }
+      20%,24%,55% { opacity: 0.6; }
+    }
+    @keyframes border-spin {
+      0%   { background-position: 0% 50%; }
+      50%  { background-position: 100% 50%; }
+      100% { background-position: 0% 50%; }
+    }
+    @keyframes count-up { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: none; } }
+    @keyframes slide-in-up { from { opacity: 0; transform: translateY(40px); } to { opacity: 1; transform: none; } }
+    @keyframes slide-in-left { from { opacity: 0; transform: translateX(-30px); } to { opacity: 1; transform: none; } }
+    @keyframes fade-in { from { opacity: 0; } to { opacity: 1; } }
+    @keyframes price-flash-green { 0%,100% { color: inherit; } 50% { color: var(--green); text-shadow: 0 0 8px rgba(0,232,122,0.6); } }
+    @keyframes price-flash-red   { 0%,100% { color: inherit; } 50% { color: var(--red);   text-shadow: 0 0 8px rgba(255,68,68,0.6); } }
     a { color: inherit; text-decoration: none; }
     img { max-width: 100%; display: block; }
 
@@ -57,12 +100,13 @@
       position: sticky; top: 0; z-index: 100;
       display: flex; align-items: center; justify-content: space-between;
       padding: 0 1.5rem; height: 64px;
-      background: rgba(10,12,16,0.85);
-      backdrop-filter: blur(16px);
-      border-bottom: 1px solid var(--border);
+      background: rgba(6,8,16,0.88);
+      backdrop-filter: blur(20px);
+      border-bottom: 1px solid rgba(91,114,255,0.12);
+      box-shadow: 0 1px 0 rgba(91,114,255,0.08), 0 4px 24px rgba(0,0,0,0.4);
     }
     .nav-logo { font-size: 1.2rem; font-weight: 800; letter-spacing: -0.03em; }
-    .nav-logo span { color: var(--accent); }
+    .nav-logo span { color: var(--accent); text-shadow: 0 0 12px rgba(91,114,255,0.6); animation: neon-flicker 8s infinite; }
     .nav-links { display: flex; gap: 2rem; font-size: 0.875rem; color: var(--muted); }
     .nav-links a:hover { color: var(--text); }
     .nav-cta { display: flex; gap: 0.75rem; }
@@ -75,8 +119,19 @@
     }
     .btn-ghost  { background: transparent; color: var(--muted); border: 1px solid var(--border); }
     .btn-ghost:hover { color: var(--text); border-color: rgba(255,255,255,0.2); }
-    .btn-primary { background: var(--accent); color: #fff; }
-    .btn-primary:hover { background: #7389e8; transform: translateY(-1px); box-shadow: 0 8px 24px rgba(100,120,220,0.35); }
+    .btn-primary {
+      background: linear-gradient(135deg, var(--accent), var(--accent2));
+      color: #fff;
+      box-shadow: 0 0 18px rgba(91,114,255,0.35);
+      position: relative; overflow: hidden;
+    }
+    .btn-primary::after {
+      content: ''; position: absolute; inset: 0;
+      background: linear-gradient(135deg, transparent 40%, rgba(255,255,255,0.15) 50%, transparent 60%);
+      transform: translateX(-100%); transition: transform 0.5s;
+    }
+    .btn-primary:hover::after { transform: translateX(100%); }
+    .btn-primary:hover { transform: translateY(-2px); box-shadow: 0 0 32px rgba(91,114,255,0.6), 0 8px 24px rgba(91,114,255,0.3); }
     .btn-lg { padding: 0.85rem 2rem; font-size: 1rem; border-radius: var(--radius); }
     .btn-outline { background: transparent; color: var(--text); border: 1px solid var(--border); }
     .btn-outline:hover { border-color: var(--accent); color: var(--accent); }
@@ -91,49 +146,89 @@
     .hero::before {
       content: '';
       position: absolute; inset: 0;
-      background: radial-gradient(ellipse 80% 60% at 50% -10%, rgba(100,120,220,0.18) 0%, transparent 70%);
+      background:
+        radial-gradient(ellipse 90% 60% at 50% -5%, rgba(91,114,255,0.22) 0%, transparent 65%),
+        radial-gradient(ellipse 50% 40% at 20% 80%, rgba(168,85,247,0.1) 0%, transparent 60%),
+        radial-gradient(ellipse 50% 40% at 80% 80%, rgba(0,212,255,0.08) 0%, transparent 60%);
       pointer-events: none;
     }
-    .hero-eyebrow { margin-bottom: 1.5rem; }
+    /* Scan-line overlay */
+    .hero::after {
+      content: '';
+      position: absolute; left: 0; right: 0; height: 2px;
+      background: linear-gradient(90deg, transparent, rgba(91,114,255,0.6), rgba(0,212,255,0.6), transparent);
+      animation: scan-line 6s ease-in-out infinite;
+      pointer-events: none;
+    }
+    .hero-eyebrow { margin-bottom: 1.5rem; animation: fade-in 0.8s ease both; }
     .hero h1 {
       font-size: clamp(2.5rem, 7vw, 5rem);
       font-weight: 900;
       letter-spacing: -0.04em;
       line-height: 1.05;
       margin-bottom: 1.5rem;
+      animation: slide-in-up 0.9s ease both 0.1s;
     }
     .hero h1 .grad {
-      background: linear-gradient(135deg, var(--accent) 0%, var(--accent2) 100%);
+      background: linear-gradient(135deg, var(--accent) 0%, var(--cyan) 40%, var(--accent2) 100%);
+      background-size: 200% 200%;
       -webkit-background-clip: text;
       -webkit-text-fill-color: transparent;
       background-clip: text;
+      animation: border-spin 4s linear infinite;
     }
     .hero-sub {
       font-size: clamp(1rem, 2.5vw, 1.25rem);
       color: var(--muted); max-width: 620px; margin: 0 auto 2.5rem;
       line-height: 1.65;
+      animation: slide-in-up 0.9s ease both 0.2s;
     }
-    .hero-ctas { display: flex; gap: 1rem; justify-content: center; flex-wrap: wrap; margin-bottom: 3rem; }
-    .hero-social { font-size: 0.8rem; color: var(--muted); }
+    .hero-ctas { display: flex; gap: 1rem; justify-content: center; flex-wrap: wrap; margin-bottom: 3rem; animation: slide-in-up 0.9s ease both 0.3s; }
+    .hero-social { font-size: 0.8rem; color: var(--muted); animation: fade-in 1s ease both 0.5s; }
     .hero-social strong { color: var(--text); }
+
+    /* ── Floating price chips in hero ───────────────────────────────── */
+    .hero-chips {
+      position: absolute; inset: 0; pointer-events: none; overflow: hidden;
+    }
+    .hero-chip {
+      position: absolute;
+      background: rgba(13,17,23,0.85);
+      border: 1px solid rgba(91,114,255,0.25);
+      border-radius: 8px;
+      padding: 0.35rem 0.75rem;
+      font-size: 0.75rem; font-weight: 700;
+      backdrop-filter: blur(8px);
+      animation: float-up 4s ease-in-out infinite;
+      box-shadow: 0 0 12px rgba(91,114,255,0.15);
+    }
+    .hero-chip .chip-sym { color: var(--text); margin-right: 0.3rem; }
+    .hero-chip .chip-val { color: var(--green); }
+    .hero-chip .chip-chg { color: var(--muted); font-weight: 400; margin-left: 0.3rem; font-size: 0.65rem; }
 
     /* ── Ticker tape ────────────────────────────────────────────────── */
     .ticker-tape {
-      background: var(--bg2);
-      border-top: 1px solid var(--border);
-      border-bottom: 1px solid var(--border);
-      overflow: hidden; padding: 0.6rem 0;
+      background: linear-gradient(90deg, var(--bg), var(--bg2), var(--bg));
+      border-top: 1px solid rgba(91,114,255,0.15);
+      border-bottom: 1px solid rgba(91,114,255,0.15);
+      overflow: hidden; padding: 0.65rem 0;
       white-space: nowrap;
+      box-shadow: inset 0 1px 0 rgba(91,114,255,0.05), inset 0 -1px 0 rgba(91,114,255,0.05);
     }
     .ticker-inner {
       display: inline-flex; gap: 3rem;
-      animation: ticker-scroll 30s linear infinite;
+      animation: ticker-scroll 35s linear infinite;
     }
-    .ticker-item { font-size: 0.85rem; display: flex; gap: 0.5rem; align-items: center; }
+    .ticker-item {
+      font-size: 0.85rem; display: flex; gap: 0.5rem; align-items: center;
+      padding: 0.15rem 0.6rem; border-radius: 6px;
+      transition: background 0.2s;
+    }
+    .ticker-item:hover { background: rgba(91,114,255,0.08); }
     .ticker-sym  { font-weight: 700; color: var(--text); }
-    .ticker-price { color: var(--muted); }
-    .ticker-chg.pos { color: var(--green); }
-    .ticker-chg.neg { color: var(--red); }
+    .ticker-price { color: var(--muted); font-variant-numeric: tabular-nums; }
+    .ticker-chg.pos { color: var(--green); text-shadow: 0 0 8px rgba(0,232,122,0.4); }
+    .ticker-chg.neg { color: var(--red);   text-shadow: 0 0 8px rgba(255,68,68,0.4); }
     @keyframes ticker-scroll {
       0%   { transform: translateX(0); }
       100% { transform: translateX(-50%); }
@@ -142,18 +237,31 @@
     /* ── STATS BAR ──────────────────────────────────────────────────── */
     .stats-bar {
       display: flex; flex-wrap: wrap; justify-content: center; gap: 0;
-      border-top: 1px solid var(--border);
-      border-bottom: 1px solid var(--border);
-      background: var(--bg2);
+      border-top: 1px solid rgba(91,114,255,0.12);
+      border-bottom: 1px solid rgba(91,114,255,0.12);
+      background: linear-gradient(90deg, var(--bg2), rgba(13,17,23,0.95), var(--bg2));
+      position: relative; overflow: hidden;
+    }
+    .stats-bar::before {
+      content: '';
+      position: absolute; top: 0; left: -100%; right: -100%; height: 1px;
+      background: linear-gradient(90deg, transparent, var(--accent), var(--cyan), var(--accent2), transparent);
+      animation: border-spin 4s linear infinite;
     }
     .stat-item {
       flex: 1; min-width: 160px;
       padding: 1.5rem 1.25rem;
       text-align: center;
       border-right: 1px solid var(--border);
+      transition: background 0.3s;
     }
+    .stat-item:hover { background: rgba(91,114,255,0.04); }
     .stat-item:last-child { border-right: none; }
-    .stat-val { font-size: 2rem; font-weight: 800; letter-spacing: -0.03em; color: var(--text); }
+    .stat-val {
+      font-size: 2rem; font-weight: 800; letter-spacing: -0.03em; color: var(--text);
+      transition: text-shadow 0.3s;
+    }
+    .stat-item:hover .stat-val { text-shadow: 0 0 20px rgba(91,114,255,0.5); }
     .stat-label { font-size: 0.75rem; color: var(--muted); text-transform: uppercase; letter-spacing: 0.06em; margin-top: 0.25rem; }
 
     /* ── FEATURES GRID ──────────────────────────────────────────────── */
@@ -170,18 +278,37 @@
       border: 1px solid var(--border);
       border-radius: var(--radius-lg);
       padding: 1.75rem;
-      transition: border-color 0.2s, transform 0.2s;
+      transition: border-color 0.3s, transform 0.3s, box-shadow 0.3s;
       position: relative;
       overflow: hidden;
     }
-    .feat-card:hover { border-color: rgba(100,120,220,0.3); transform: translateY(-3px); }
+    .feat-card:hover {
+      border-color: rgba(91,114,255,0.4);
+      transform: translateY(-5px);
+      box-shadow: 0 8px 32px rgba(91,114,255,0.12), 0 0 0 1px rgba(91,114,255,0.1);
+    }
     .feat-card::before {
       content: '';
       position: absolute; top: 0; left: 0; right: 0; height: 2px;
-      background: linear-gradient(90deg, var(--accent), var(--accent2));
-      opacity: 0; transition: opacity 0.2s;
+      background: linear-gradient(90deg, var(--accent), var(--cyan), var(--accent2));
+      background-size: 200% 100%;
+      opacity: 0; transition: opacity 0.3s;
+      animation: border-spin 3s linear infinite;
     }
     .feat-card:hover::before { opacity: 1; }
+    .feat-card::after {
+      content: '';
+      position: absolute; inset: 0;
+      background: radial-gradient(ellipse 60% 50% at 50% 0%, rgba(91,114,255,0.05) 0%, transparent 70%);
+      opacity: 0; transition: opacity 0.3s; pointer-events: none;
+    }
+    .feat-card:hover::after { opacity: 1; }
+
+    /* Scroll reveal */
+    .reveal { opacity: 0; transform: translateY(30px); transition: opacity 0.6s ease, transform 0.6s ease; }
+    .reveal.visible { opacity: 1; transform: none; }
+    .reveal-left { opacity: 0; transform: translateX(-30px); transition: opacity 0.6s ease, transform 0.6s ease; }
+    .reveal-left.visible { opacity: 1; transform: none; }
 
     .feat-icon {
       width: 48px; height: 48px;
@@ -197,10 +324,11 @@
     /* ── COCKPIT SHOWCASE ────────────────────────────────────────────── */
     .cockpit-showcase {
       background: var(--bg2);
-      border: 1px solid var(--border);
+      border: 1px solid rgba(91,114,255,0.2);
       border-radius: var(--radius-lg);
       overflow: hidden;
-      box-shadow: 0 40px 80px rgba(0,0,0,0.4);
+      box-shadow: 0 40px 80px rgba(0,0,0,0.6), 0 0 0 1px rgba(91,114,255,0.08), 0 0 60px rgba(91,114,255,0.06);
+      animation: float-up 6s ease-in-out infinite;
     }
     .showcase-bar {
       background: var(--bg3);
@@ -260,13 +388,15 @@
     .price-card {
       background: var(--bg2); border: 1px solid var(--border);
       border-radius: var(--radius-lg); padding: 2rem;
-      transition: transform 0.2s;
+      transition: transform 0.3s, box-shadow 0.3s, border-color 0.3s;
     }
-    .price-card:hover { transform: translateY(-4px); }
+    .price-card:hover { transform: translateY(-6px); box-shadow: 0 16px 48px rgba(0,0,0,0.3); border-color: rgba(91,114,255,0.25); }
     .price-card.featured {
-      border-color: var(--accent);
-      background: linear-gradient(180deg, rgba(100,120,220,0.08) 0%, var(--bg2) 100%);
+      border-color: rgba(91,114,255,0.5);
+      background: linear-gradient(180deg, rgba(91,114,255,0.1) 0%, rgba(168,85,247,0.05) 50%, var(--bg2) 100%);
       position: relative;
+      box-shadow: 0 0 0 1px rgba(91,114,255,0.2), 0 0 40px rgba(91,114,255,0.1);
+      animation: glow-pulse 3s ease-in-out infinite;
     }
     .featured-badge {
       position: absolute; top: -1px; left: 50%; transform: translateX(-50%);
@@ -416,6 +546,7 @@
   </style>
 </head>
 <body>
+<canvas id="particle-canvas"></canvas>
 
 <!-- ── NAV ───────────────────────────────────────────────────────────────── -->
 <nav>
@@ -436,17 +567,28 @@
 <!-- ── HERO ──────────────────────────────────────────────────────────────── -->
 <section class="hero">
   <div class="container">
+    <!-- Floating price chips -->
+    <div class="hero-chips" aria-hidden="true">
+      <div class="hero-chip" style="top:18%;left:6%;animation-delay:0s;animation-duration:5s"><span class="chip-sym">BTC</span><span class="chip-val">$67,420</span><span class="chip-chg">+2.1%</span></div>
+      <div class="hero-chip" style="top:30%;right:7%;animation-delay:1s;animation-duration:6s"><span class="chip-sym">ETH</span><span class="chip-val">$3,512</span><span class="chip-chg">+1.8%</span></div>
+      <div class="hero-chip" style="top:60%;left:4%;animation-delay:2s;animation-duration:4.5s;border-color:rgba(168,85,247,0.35)"><span class="chip-sym">SOL</span><span class="chip-val">$168</span><span class="chip-chg" style="color:var(--red)">-0.7%</span></div>
+      <div class="hero-chip" style="top:55%;right:5%;animation-delay:0.5s;animation-duration:5.5s;border-color:rgba(0,212,255,0.3)"><span class="chip-sym">BNB</span><span class="chip-val">$581</span><span class="chip-chg">+0.9%</span></div>
+      <div class="hero-chip" style="top:75%;left:10%;animation-delay:1.5s;animation-duration:7s;border-color:rgba(0,232,122,0.3)"><span class="chip-sym">WIN</span><span class="chip-val">64.3%</span><span class="chip-chg" style="color:var(--cyan)">RSI strat</span></div>
+    </div>
+
     <div class="hero-eyebrow">
-      <span class="badge badge-green">● Live</span>
+      <span class="badge badge-green">● Live WebSocket</span>
       &nbsp;
-      <span class="badge badge-blue">Multi-Timeframe AI Signals</span>
+      <span class="badge badge-blue">3-Agent AI Council</span>
+      &nbsp;
+      <span class="badge badge-purple">5-Phase Build</span>
     </div>
     <h1>
-      The crypto cockpit<br/>serious traders use
+      The complete crypto<br/>trading OS
       <br/><span class="grad">without paying $200/mo</span>
     </h1>
     <p class="hero-sub">
-      Select a coin. Instantly see live prices on 5 exchanges, multi-timeframe signals (1H/4H/1D), AI trade reasoning, Polymarket odds, Kelly-sized position recommendations, and the latest news — all on one screen.
+      Signal Command Center, 3-agent AI council (Technical + Sentiment + Risk), live strategy backtester, trade journal with P&amp;L tracking, portfolio tracker with Binance sync, smart Slack alerts that fire even when your browser is closed — all on one screen.
     </p>
     <div class="hero-ctas">
       <a href="#waitlist" class="btn btn-primary btn-lg" onclick="document.getElementById('waitlist').scrollIntoView({behavior:'smooth'});return false;">Get Pro — $20/mo →</a>
@@ -487,11 +629,11 @@
 
 <!-- ── STATS BAR ───────────────────────────────────────────────────────────── -->
 <div class="stats-bar">
-  <div class="stat-item"><div class="stat-val">10+</div><div class="stat-label">Coins tracked</div></div>
-  <div class="stat-item"><div class="stat-val">5</div><div class="stat-label">Exchanges compared</div></div>
-  <div class="stat-item"><div class="stat-val">3</div><div class="stat-label">Timeframe signals</div></div>
+  <div class="stat-item"><div class="stat-val">15+</div><div class="stat-label">Live WebSocket assets</div></div>
+  <div class="stat-item"><div class="stat-val">3</div><div class="stat-label">AI specialist agents</div></div>
+  <div class="stat-item"><div class="stat-val">4</div><div class="stat-label">Backtest strategies</div></div>
   <div class="stat-item"><div class="stat-val" style="color:var(--green)">$20</div><div class="stat-label">Per month · Pro</div></div>
-  <div class="stat-item"><div class="stat-val">50+</div><div class="stat-label">Tools built-in</div></div>
+  <div class="stat-item"><div class="stat-val">70+</div><div class="stat-label">Tools &amp; modules built-in</div></div>
 </div>
 
 <!-- ── COCKPIT SHOWCASE ───────────────────────────────────────────────────── -->
@@ -499,7 +641,7 @@
   <div class="container">
     <div class="section-label"><span class="badge badge-blue">Live Demo</span></div>
     <h2 class="section-title">One screen. Every edge.</h2>
-    <p class="section-sub">Pick a coin and the cockpit auto-loads everything you need to decide in under 30 seconds.</p>
+    <p class="section-sub">Signal Command Center, AI Agent Council, live backtester, trade journal, portfolio and Slack alerts — all wired together and always in sync.</p>
 
     <div class="cockpit-showcase">
       <div class="showcase-bar">
@@ -509,81 +651,91 @@
         <div class="show-url">traderpro.app/dashboard</div>
         <span class="badge badge-green" style="font-size:0.65rem">● Live</span>
       </div>
-      <div class="showcase-content">
+      <div class="showcase-content" style="grid-template-columns:repeat(3,1fr)">
 
         <div class="sc-panel">
-          <div class="sc-label">BTC / USDT — Binance</div>
-          <div class="sc-val" style="color:#f7931a">$67,420</div>
-          <div class="sc-sub" style="color:#2dd882">+2.14% 24h &nbsp;·&nbsp; Vol $28.4B</div>
-          <div class="sc-bar-bg" style="margin-top:0.75rem">
-            <div class="sc-bar" style="width:72%;background:#f7931a"></div>
-          </div>
-          <div class="sc-sub" style="margin-top:0.3rem">72 of 100 Fear &amp; Greed · Greed</div>
-        </div>
-
-        <div class="sc-panel">
-          <div class="sc-label">Multi-Timeframe Signals</div>
-          <div class="sc-mtf-row">
-            <div class="sc-mtf-chip" style="color:#2dd882;border-color:rgba(45,216,130,0.4)">1H BUY</div>
-            <div class="sc-mtf-chip" style="color:#2dd882;border-color:rgba(45,216,130,0.4)">4H BUY</div>
-            <div class="sc-mtf-chip" style="color:#f59e0b;border-color:rgba(245,158,11,0.4)">1D HOLD</div>
-          </div>
-          <div style="margin-top:0.75rem">
-            <div class="sc-label">Consensus</div>
-            <div class="sc-signal" style="background:rgba(45,216,130,0.12);color:#2dd882">BUY · 74% confidence</div>
-          </div>
-          <div class="sc-sub" style="margin-top:0.5rem;color:#8892a4">RSI 42 · SMA above · Volume ↑</div>
-        </div>
-
-        <div class="sc-panel">
-          <div class="sc-label">Polymarket Odds</div>
-          <div class="sc-sub" style="margin-bottom:0.5rem">BTC above $100K by end of 2025?</div>
-          <div style="display:flex;justify-content:space-between;margin-bottom:0.4rem">
-            <span style="color:#2dd882;font-weight:700">YES 71%</span>
-            <span style="color:#ff5f57;font-weight:700">NO 29%</span>
-          </div>
-          <div class="sc-bar-bg">
-            <div class="sc-bar" style="width:71%;background:#2dd882"></div>
-          </div>
-          <div class="sc-sub" style="margin-top:0.4rem">Vol $4.8M · Trend +3.2% 24h</div>
-        </div>
-
-        <div class="sc-panel">
-          <div class="sc-label">Exchange Comparison</div>
-          <div style="font-size:0.8rem;display:flex;flex-direction:column;gap:0.3rem;margin-top:0.25rem">
-            <div style="display:flex;justify-content:space-between"><span style="color:#2dd882;font-weight:700">Binance</span><span>$67,420 ← Best Buy</span></div>
-            <div style="display:flex;justify-content:space-between"><span>Bybit</span><span>$67,441</span></div>
-            <div style="display:flex;justify-content:space-between"><span>Kraken</span><span>$67,436</span></div>
-            <div style="display:flex;justify-content:space-between"><span>Coinbase</span><span>$67,454</span></div>
-            <div style="display:flex;justify-content:space-between"><span style="color:#ff5f57;font-weight:700">OKX</span><span>$67,458 ← Best Sell</span></div>
-          </div>
-          <div class="sc-sub" style="margin-top:0.5rem;color:#f59e0b">Spread: 0.057% · Est profit: -0.14%</div>
-        </div>
-
-        <div class="sc-panel">
-          <div class="sc-label">Kelly Position Sizer</div>
-          <div class="sc-val" style="font-size:1.25rem;color:#2dd882">$2,340</div>
-          <div class="sc-sub">of $10,000 capital · Quarter-Kelly</div>
-          <div style="font-size:0.78rem;margin-top:0.6rem;display:flex;flex-direction:column;gap:0.25rem">
-            <div style="display:flex;justify-content:space-between"><span style="color:#8892a4">Stop Loss</span><span style="color:#ff5f57">$64,049</span></div>
-            <div style="display:flex;justify-content:space-between"><span style="color:#8892a4">Take Profit</span><span style="color:#2dd882">$72,814</span></div>
-            <div style="display:flex;justify-content:space-between"><span style="color:#8892a4">Risk/Reward</span><span>1 : 2.2</span></div>
-          </div>
-        </div>
-
-        <div class="sc-panel">
-          <div class="sc-label">Latest News — BTC</div>
-          <div style="display:flex;flex-direction:column;gap:0.5rem;margin-top:0.25rem">
-            <div style="font-size:0.78rem;padding:0.4rem;background:rgba(45,216,130,0.06);border-radius:6px;border-left:2px solid #2dd882">
-              Institutional BTC accumulation hits 6-month high
+          <div class="sc-label">🎯 Signal Command Center</div>
+          <div style="display:flex;flex-direction:column;gap:0.35rem;margin-top:0.25rem;font-size:0.78rem">
+            <div style="display:flex;justify-content:space-between;padding:0.3rem 0.5rem;background:rgba(45,216,130,0.08);border-radius:5px;border-left:2px solid #2dd882">
+              <span style="font-weight:700;color:#2dd882">BTC ↑ BUY</span><span style="color:#8892a4">Score 87 · ml+mtf</span>
             </div>
-            <div style="font-size:0.78rem;padding:0.4rem;background:rgba(45,216,130,0.06);border-radius:6px;border-left:2px solid #2dd882">
-              Spot ETF inflows: $420M in 24h
+            <div style="display:flex;justify-content:space-between;padding:0.3rem 0.5rem;background:rgba(45,216,130,0.08);border-radius:5px;border-left:2px solid #2dd882">
+              <span style="font-weight:700;color:#2dd882">ETH ↑ BUY</span><span style="color:#8892a4">Score 79 · signal_bus</span>
             </div>
-            <div style="font-size:0.78rem;padding:0.4rem;background:rgba(245,158,11,0.06);border-radius:6px;border-left:2px solid #f59e0b">
-              Fed signals rate pause — crypto neutral
+            <div style="display:flex;justify-content:space-between;padding:0.3rem 0.5rem;background:rgba(245,158,11,0.08);border-radius:5px;border-left:2px solid #f59e0b">
+              <span style="font-weight:700;color:#f59e0b">SOL → HOLD</span><span style="color:#8892a4">Score 51 · mtf</span>
             </div>
           </div>
+          <div class="sc-sub" style="margin-top:0.5rem">SignalBus · dedup 2min · weighted rank</div>
+        </div>
+
+        <div class="sc-panel">
+          <div class="sc-label">🤖 AI Agent Council — BTC</div>
+          <div style="display:flex;flex-direction:column;gap:0.3rem;margin-top:0.25rem;font-size:0.78rem">
+            <div style="display:flex;justify-content:space-between"><span style="color:#6478dc">📊 Technical</span><span style="color:#2dd882">BUY 82%</span></div>
+            <div style="display:flex;justify-content:space-between"><span style="color:#9945ff">💬 Sentiment</span><span style="color:#2dd882">BULLISH 71%</span></div>
+            <div style="display:flex;justify-content:space-between"><span style="color:#f59e0b">🛡 Risk Mgr</span><span style="color:#f59e0b">CAUTION 58%</span></div>
+          </div>
+          <div style="margin-top:0.6rem">
+            <div class="sc-signal" style="background:rgba(45,216,130,0.12);color:#2dd882;font-size:0.8rem">Chief: BUY · $2,340 Kelly size</div>
+          </div>
+        </div>
+
+        <div class="sc-panel">
+          <div class="sc-label">📊 Strategy Backtester</div>
+          <div style="font-size:0.78rem;display:flex;flex-direction:column;gap:0.25rem;margin-top:0.25rem">
+            <div style="display:flex;justify-content:space-between"><span style="color:#8892a4">Strategy</span><span>RSI Mean Reversion</span></div>
+            <div style="display:flex;justify-content:space-between"><span style="color:#8892a4">Win Rate</span><span style="color:#2dd882">64.3%</span></div>
+            <div style="display:flex;justify-content:space-between"><span style="color:#8892a4">Total R</span><span style="color:#2dd882">+18.4R</span></div>
+            <div style="display:flex;justify-content:space-between"><span style="color:#8892a4">Max DD</span><span style="color:#ff5f57">-6.2%</span></div>
+            <div style="display:flex;justify-content:space-between"><span style="color:#8892a4">vs B&amp;H</span><span style="color:#2dd882">+12.1%</span></div>
+          </div>
+        </div>
+
+        <div class="sc-panel">
+          <div class="sc-label">📓 Trade Journal</div>
+          <div style="font-size:0.78rem;display:flex;flex-direction:column;gap:0.3rem;margin-top:0.25rem">
+            <div style="display:flex;justify-content:space-between;padding:0.25rem 0.4rem;background:rgba(45,216,130,0.06);border-radius:4px">
+              <span>BTC LONG</span><span style="color:#2dd882">+$420 · +2.1R</span>
+            </div>
+            <div style="display:flex;justify-content:space-between;padding:0.25rem 0.4rem;background:rgba(255,95,87,0.06);border-radius:4px">
+              <span>ETH SHORT</span><span style="color:#ff5f57">-$180 · -0.9R</span>
+            </div>
+            <div style="display:flex;justify-content:space-between;padding:0.25rem 0.4rem;background:rgba(100,120,220,0.06);border-radius:4px">
+              <span>SOL LONG</span><span style="color:#6478dc">Open ↑ +1.4%</span>
+            </div>
+          </div>
+          <div class="sc-sub" style="margin-top:0.4rem">Win rate 68% · Avg R +1.4 · Slack on close</div>
+        </div>
+
+        <div class="sc-panel">
+          <div class="sc-label">💼 Portfolio Tracker</div>
+          <div style="font-size:0.78rem;display:flex;flex-direction:column;gap:0.25rem;margin-top:0.25rem">
+            <div style="display:flex;justify-content:space-between"><span style="color:#f7931a">● BTC</span><span>0.12 · $8,090</span></div>
+            <div style="display:flex;justify-content:space-between"><span style="color:#6478dc">● ETH</span><span>1.5 · $5,268</span></div>
+            <div style="display:flex;justify-content:space-between"><span style="color:#9945ff">● SOL</span><span>12 · $2,021</span></div>
+          </div>
+          <div style="margin-top:0.5rem;display:flex;justify-content:space-between;font-size:0.78rem;font-weight:700">
+            <span style="color:#8892a4">Total Value</span>
+            <span style="color:#2dd882">$15,379 +4.2%</span>
+          </div>
+          <div class="sc-sub" style="margin-top:0.25rem">Binance API sync · live prices</div>
+        </div>
+
+        <div class="sc-panel">
+          <div class="sc-label">🔔 Smart Alert Engine</div>
+          <div style="font-size:0.78rem;display:flex;flex-direction:column;gap:0.3rem;margin-top:0.25rem">
+            <div style="display:flex;justify-content:space-between;padding:0.25rem 0.4rem;background:rgba(45,216,130,0.06);border-radius:4px">
+              <span>BTC &gt; $70K</span><span style="color:#2dd882">● Active</span>
+            </div>
+            <div style="display:flex;justify-content:space-between;padding:0.25rem 0.4rem;background:rgba(100,120,220,0.06);border-radius:4px">
+              <span>ETH RSI &lt; 30</span><span style="color:#6478dc">● Active</span>
+            </div>
+            <div style="display:flex;justify-content:space-between;padding:0.25rem 0.4rem;background:rgba(153,69,255,0.06);border-radius:4px">
+              <span>SOL BUY signal</span><span style="color:#9945ff">● Watching</span>
+            </div>
+          </div>
+          <div class="sc-sub" style="margin-top:0.4rem">Fires Slack even when browser closed</div>
         </div>
 
       </div>
@@ -600,88 +752,88 @@
 
     <div class="features-grid">
 
-      <div class="feat-card">
-        <div class="feat-icon" style="background:rgba(247,147,26,0.12)">₿</div>
-        <div class="feat-title">Unified Coin Cockpit</div>
-        <div class="feat-desc">Select any coin and instantly load price, signals, news, exchange rates, Polymarket odds and position size — all in one view. No research required.</div>
-        <div class="feat-tags"><span class="feat-tag">10 Coins</span><span class="feat-tag">Auto Refresh</span><span class="feat-tag">5-min Cache</span></div>
+      <div class="feat-card reveal">
+        <div class="feat-icon" style="background:rgba(100,120,220,0.12)">🎯</div>
+        <div class="feat-title">Signal Command Center</div>
+        <div class="feat-desc">Unified signal radar scans 10 coins simultaneously. Every source — multi-timeframe, AI predictions, SignalBus events — is weighted, deduped and ranked by score so the highest-conviction setups always surface first.</div>
+        <div class="feat-tags"><span class="feat-tag">SignalBus</span><span class="feat-tag">10 Coins</span><span class="feat-tag">Weighted Rank</span><span class="feat-tag">2-min Dedup</span></div>
       </div>
 
-      <div class="feat-card">
-        <div class="feat-icon" style="background:rgba(100,120,220,0.12)">📊</div>
-        <div class="feat-title">Multi-Timeframe Signals</div>
-        <div class="feat-desc">Separate BUY/SELL/HOLD signals computed from 1H, 4H and 1D candles with RSI, SMA, MACD, Volume and ADX. Weighted consensus shows the dominant direction with a confidence score.</div>
-        <div class="feat-tags"><span class="feat-tag">1H / 4H / 1D</span><span class="feat-tag">RSI + MACD</span><span class="feat-tag">Confidence %</span></div>
-      </div>
-
-      <div class="feat-card">
+      <div class="feat-card reveal">
         <div class="feat-icon" style="background:rgba(153,69,255,0.12)">🤖</div>
-        <div class="feat-title">AI Trade Engine</div>
-        <div class="feat-desc">Plug in your OpenRouter key to get plain-English trade reasoning from Mistral-7B. The engine reads live indicators and explains exactly why a signal is BUY or SELL in your own words.</div>
-        <div class="feat-tags"><span class="feat-tag">LLM Reasoning</span><span class="feat-tag">Free Tier</span><span class="feat-tag">History Log</span></div>
+        <div class="feat-title">3-Agent AI Council</div>
+        <div class="feat-desc">Three specialist AI agents debate every trade: Technical Analyst (RSI/MACD/ADX), Sentiment Analyst (SignalBus + Fear &amp; Greed), and Risk Manager (volatility + Kelly). A Chief Analyst synthesises their votes into a single weighted verdict.</div>
+        <div class="feat-tags"><span class="feat-tag">Technical Agent</span><span class="feat-tag">Sentiment Agent</span><span class="feat-tag">Risk Agent</span><span class="feat-tag">Quarter-Kelly</span></div>
       </div>
 
-      <div class="feat-card">
-        <div class="feat-icon" style="background:rgba(45,216,130,0.12)">📐</div>
-        <div class="feat-title">Kelly Position Sizer</div>
-        <div class="feat-desc">Full / Half / Quarter-Kelly calculations pre-filled with the live price and signal. Shows dollar amount, units, stop loss, take profit and max risk — instantly.</div>
-        <div class="feat-tags"><span class="feat-tag">Kelly Criterion</span><span class="feat-tag">Risk/Reward</span><span class="feat-tag">Auto-filled</span></div>
+      <div class="feat-card reveal">
+        <div class="feat-icon" style="background:rgba(45,216,130,0.12)">📊</div>
+        <div class="feat-title">Strategy Backtester</div>
+        <div class="feat-desc">Test 4 built-in strategies (RSI Mean Reversion, MA Crossover, MACD Signal Cross, Bollinger Squeeze) against real Binance klines. See win rate, total R, max drawdown and equity curve vs buy-and-hold — before you risk a cent.</div>
+        <div class="feat-tags"><span class="feat-tag">4 Strategies</span><span class="feat-tag">Equity Curve</span><span class="feat-tag">vs B&amp;H</span><span class="feat-tag">Binance Klines</span></div>
       </div>
 
-      <div class="feat-card">
-        <div class="feat-icon" style="background:rgba(245,158,11,0.12)">🔮</div>
-        <div class="feat-title">Polymarket Integration</div>
-        <div class="feat-desc">Real prediction market odds for every major coin. YES/NO probabilities, 24h trend and volume — so you can see what the market is pricing in, not just what charts show.</div>
-        <div class="feat-tags"><span class="feat-tag">Live Gamma API</span><span class="feat-tag">Per-Coin</span><span class="feat-tag">Signal Tag</span></div>
+      <div class="feat-card reveal">
+        <div class="feat-icon" style="background:rgba(245,158,11,0.12)">📓</div>
+        <div class="feat-title">Trade Journal</div>
+        <div class="feat-desc">Log trades with entry, size, direction and notes. Close them with P&amp;L and R-multiple auto-calculated. Export to CSV. Closed trades fire a Slack notification automatically so your team stays in sync.</div>
+        <div class="feat-tags"><span class="feat-tag">P&amp;L Tracking</span><span class="feat-tag">R-Multiple</span><span class="feat-tag">CSV Export</span><span class="feat-tag">Slack on Close</span></div>
       </div>
 
-      <div class="feat-card">
-        <div class="feat-icon" style="background:rgba(255,95,87,0.12)">💱</div>
-        <div class="feat-title">5-Exchange Comparison</div>
-        <div class="feat-desc">Binance, Bybit, Kraken, Coinbase and OKX prices side by side. Arbitrage spread, best buy, best sell and estimated profit — all updated every 30 seconds.</div>
-        <div class="feat-tags"><span class="feat-tag">Arb Scanner</span><span class="feat-tag">Best Buy/Sell</span><span class="feat-tag">Spread %</span></div>
-      </div>
-
-      <div class="feat-card">
-        <div class="feat-icon" style="background:rgba(100,120,220,0.12)">🌐</div>
-        <div class="feat-title">Macro Sentiment</div>
-        <div class="feat-desc">Fear &amp; Greed gauge, 30-day history chart, BTC dominance, total market cap and Signal Alignment Matrix — so your trade direction matches the macro environment.</div>
-        <div class="feat-tags"><span class="feat-tag">F&amp;G Index</span><span class="feat-tag">BTC Dominance</span><span class="feat-tag">Alignment Matrix</span></div>
-      </div>
-
-      <div class="feat-card">
-        <div class="feat-icon" style="background:rgba(45,216,130,0.12)">📰</div>
-        <div class="feat-title">Coin-Specific News</div>
-        <div class="feat-desc">Latest news filtered by selected coin with sentiment scoring (Bullish / Neutral / Bearish). Sources from multiple feeds so you never miss a catalyst.</div>
-        <div class="feat-tags"><span class="feat-tag">Sentiment Score</span><span class="feat-tag">Multi-source</span><span class="feat-tag">Auto-filter</span></div>
-      </div>
-
-      <div class="feat-card">
-        <div class="feat-icon" style="background:rgba(153,69,255,0.12)">💾</div>
-        <div class="feat-title">Local SQLite Database</div>
-        <div class="feat-desc">Prices, signals, on-chain metrics and news cached locally every 5 minutes. Your historical data stays on your machine — perfect for future ML analysis with no API costs.</div>
-        <div class="feat-tags"><span class="feat-tag">SQLite</span><span class="feat-tag">11 Tables</span><span class="feat-tag">Export-ready</span></div>
-      </div>
-
-      <div class="feat-card">
-        <div class="feat-icon" style="background:rgba(247,147,26,0.12)">🔐</div>
-        <div class="feat-title">Multi-User Authentication</div>
-        <div class="feat-desc">bcrypt-hashed passwords, 7-day sessions, admin roles. Each user gets their own portfolio snapshots and history. First registered user automatically becomes admin.</div>
-        <div class="feat-tags"><span class="feat-tag">bcrypt</span><span class="feat-tag">Roles</span><span class="feat-tag">Sessions</span></div>
-      </div>
-
-      <div class="feat-card">
+      <div class="feat-card reveal">
         <div class="feat-icon" style="background:rgba(45,216,130,0.12)">📈</div>
-        <div class="feat-title">On-Chain Analytics</div>
-        <div class="feat-desc">Hash rate, active addresses, transaction volume and exchange flow visualised in chart form. See the network health, not just the price.</div>
-        <div class="feat-tags"><span class="feat-tag">Blockchain.info</span><span class="feat-tag">Exchange Flow</span><span class="feat-tag">Whale Alerts</span></div>
+        <div class="feat-title">Performance Dashboard</div>
+        <div class="feat-desc">Total P&amp;L, win rate, average R, profit factor, current streak and win/loss counts in a live KPI row. Cumulative P&amp;L canvas chart with buy-and-hold reference line and per-source breakdown table.</div>
+        <div class="feat-tags"><span class="feat-tag">P&amp;L Curve</span><span class="feat-tag">Win Rate</span><span class="feat-tag">Profit Factor</span><span class="feat-tag">Streak</span></div>
       </div>
 
-      <div class="feat-card">
-        <div class="feat-icon" style="background:rgba(100,120,220,0.12)">🛡️</div>
-        <div class="feat-title">Production-Ready Backend</div>
-        <div class="feat-desc">Helmet security headers, rate limiting, gzip compression, 429 retry-with-backoff, server-side API caching, PM2 cluster mode and graceful shutdown out of the box.</div>
-        <div class="feat-tags"><span class="feat-tag">Helmet</span><span class="feat-tag">Rate Limit</span><span class="feat-tag">PM2</span><span class="feat-tag">Graceful Shutdown</span></div>
+      <div class="feat-card reveal">
+        <div class="feat-icon" style="background:rgba(247,147,26,0.12)">⚡</div>
+        <div class="feat-title">Live WebSocket Ticker Strip</div>
+        <div class="feat-desc">Persistent WebSocket to Binance streams 15 assets in real time. Tiles flash green/red on every price tick. Click any tile to jump straight into the cockpit for that asset. Price data feeds Portfolio Tracker automatically.</div>
+        <div class="feat-tags"><span class="feat-tag">WebSocket</span><span class="feat-tag">15 Assets</span><span class="feat-tag">Flash Animations</span><span class="feat-tag">Always On</span></div>
+      </div>
+
+      <div class="feat-card reveal">
+        <div class="feat-icon" style="background:rgba(255,95,87,0.12)">💼</div>
+        <div class="feat-title">Portfolio Tracker</div>
+        <div class="feat-desc">Donut chart allocation view with live prices from the ticker strip. One-click Binance read-only API sync imports your actual balances — HMAC-signed on the server. Skips stablecoins, merges with manual holdings.</div>
+        <div class="feat-tags"><span class="feat-tag">Donut Chart</span><span class="feat-tag">Binance Sync</span><span class="feat-tag">HMAC Signed</span><span class="feat-tag">Live Prices</span></div>
+      </div>
+
+      <div class="feat-card reveal">
+        <div class="feat-icon" style="background:rgba(45,216,130,0.12)">🔔</div>
+        <div class="feat-title">Smart Alert Engine + Slack</div>
+        <div class="feat-desc">Three alert types: price cross, RSI level, and SignalBus direction trigger. Fires browser notifications + in-app toasts + Slack webhooks. A server-side cron checks every 60 seconds so alerts fire even when your browser is closed.</div>
+        <div class="feat-tags"><span class="feat-tag">Price Alerts</span><span class="feat-tag">RSI Alerts</span><span class="feat-tag">Slack Webhook</span><span class="feat-tag">Server Cron</span></div>
+      </div>
+
+      <div class="feat-card reveal">
+        <div class="feat-icon" style="background:rgba(100,120,220,0.12)">🌐</div>
+        <div class="feat-title">FRED Macro Feed</div>
+        <div class="feat-desc">Federal Reserve Economic Data (CPI, Fed Funds Rate, M2, Unemployment) pulled via your FRED API key and visualised as Bullish / Bearish / Neutral macro cards — so your trades align with the macro regime.</div>
+        <div class="feat-tags"><span class="feat-tag">FRED API</span><span class="feat-tag">CPI · M2</span><span class="feat-tag">Fed Rate</span><span class="feat-tag">Regime Cards</span></div>
+      </div>
+
+      <div class="feat-card reveal">
+        <div class="feat-icon" style="background:rgba(153,69,255,0.12)">💾</div>
+        <div class="feat-title">Server-Side Persistence</div>
+        <div class="feat-desc">All alerts, journal trades and portfolio holdings are persisted in SQLite on the server. Every module syncs on init and pushes on every write — your data survives browser clears, device switches and tab reloads.</div>
+        <div class="feat-tags"><span class="feat-tag">SQLite</span><span class="feat-tag">Auto Sync</span><span class="feat-tag">4 Tables</span><span class="feat-tag">Always Current</span></div>
+      </div>
+
+      <div class="feat-card reveal">
+        <div class="feat-icon" style="background:rgba(247,147,26,0.12)">⚙️</div>
+        <div class="feat-title">Unified Settings Page</div>
+        <div class="feat-desc">Manage all API keys in one place — OpenRouter, FRED, Slack webhook, Binance read-only keys. Test Slack and Binance connectivity with one click. Push/pull all data between server and browser storage in seconds.</div>
+        <div class="feat-tags"><span class="feat-tag">Key Management</span><span class="feat-tag">Connection Test</span><span class="feat-tag">Sync All</span><span class="feat-tag">Masked Display</span></div>
+      </div>
+
+      <div class="feat-card reveal">
+        <div class="feat-icon" style="background:rgba(255,95,87,0.12)">🔮</div>
+        <div class="feat-title">Polymarket + Whale Wallets</div>
+        <div class="feat-desc">Real prediction market odds per coin with YES/NO probabilities and 24h trend. Plus whale wallet tracker shows top holder balances and recent large moves — see what smart money is doing before it shows on the chart.</div>
+        <div class="feat-tags"><span class="feat-tag">Gamma API</span><span class="feat-tag">YES/NO Odds</span><span class="feat-tag">Whale Wallets</span><span class="feat-tag">Signal Tag</span></div>
       </div>
 
     </div>
@@ -746,6 +898,41 @@
             <td><span class="check">✓</span></td>
           </tr>
           <tr>
+            <td><div class="feature-name">3-agent AI council</div><div class="feature-detail">Technical + Sentiment + Risk agents</div></td>
+            <td class="hl-col"><span class="check">✓</span></td>
+            <td><span class="cross">✗</span></td>
+            <td><span class="cross">✗</span></td>
+            <td><span class="partial">Single model</span></td>
+          </tr>
+          <tr>
+            <td><div class="feature-name">Strategy backtester</div><div class="feature-detail">4 strategies · equity curve · vs B&H</div></td>
+            <td class="hl-col"><span class="check">✓</span></td>
+            <td><span class="check">✓</span></td>
+            <td><span class="cross">✗</span></td>
+            <td><span class="cross">✗</span></td>
+          </tr>
+          <tr>
+            <td><div class="feature-name">Trade journal + P&amp;L tracking</div><div class="feature-detail">R-multiple, CSV export, Slack on close</div></td>
+            <td class="hl-col"><span class="check">✓</span></td>
+            <td><span class="partial">Manual</span></td>
+            <td><span class="cross">✗</span></td>
+            <td><span class="cross">✗</span></td>
+          </tr>
+          <tr>
+            <td><div class="feature-name">Portfolio tracker + Binance sync</div><div class="feature-detail">HMAC-signed API import, donut chart</div></td>
+            <td class="hl-col"><span class="check">✓</span></td>
+            <td><span class="cross">✗</span></td>
+            <td><span class="check">✓</span></td>
+            <td><span class="cross">✗</span></td>
+          </tr>
+          <tr>
+            <td><div class="feature-name">Smart alerts + Slack webhook</div><div class="feature-detail">Server cron fires even when browser closed</div></td>
+            <td class="hl-col"><span class="check">✓</span></td>
+            <td><span class="partial">Browser only</span></td>
+            <td><span class="partial">Push only</span></td>
+            <td><span class="cross">✗</span></td>
+          </tr>
+          <tr>
             <td><div class="feature-name">Polymarket odds</div><div class="feature-detail">Prediction market integration</div></td>
             <td class="hl-col"><span class="check">✓</span></td>
             <td><span class="cross">✗</span></td>
@@ -753,35 +940,14 @@
             <td><span class="cross">✗</span></td>
           </tr>
           <tr>
-            <td><div class="feature-name">Kelly position sizer</div><div class="feature-detail">Auto-filled with live price</div></td>
+            <td><div class="feature-name">Kelly position sizer</div><div class="feature-detail">Quarter-Kelly, auto-filled with live price</div></td>
             <td class="hl-col"><span class="check">✓</span></td>
             <td><span class="cross">✗</span></td>
             <td><span class="cross">✗</span></td>
             <td><span class="partial">Manual</span></td>
           </tr>
           <tr>
-            <td><div class="feature-name">AI LLM reasoning</div><div class="feature-detail">Natural language trade explanations</div></td>
-            <td class="hl-col"><span class="check">✓</span></td>
-            <td><span class="cross">✗</span></td>
-            <td><span class="cross">✗</span></td>
-            <td><span class="check">✓</span></td>
-          </tr>
-          <tr>
-            <td><div class="feature-name">5-exchange comparison</div><div class="feature-detail">Binance, Bybit, Kraken, Coinbase, OKX</div></td>
-            <td class="hl-col"><span class="check">✓</span></td>
-            <td><span class="cross">✗</span></td>
-            <td><span class="partial">Partial</span></td>
-            <td><span class="cross">✗</span></td>
-          </tr>
-          <tr>
-            <td><div class="feature-name">Local SQLite database</div><div class="feature-detail">Own your data, ML-ready</div></td>
-            <td class="hl-col"><span class="check">✓</span></td>
-            <td><span class="cross">✗</span></td>
-            <td><span class="cross">✗</span></td>
-            <td><span class="cross">✗</span></td>
-          </tr>
-          <tr>
-            <td><div class="feature-name">Self-hostable</div><div class="feature-detail">Run on your own machine</div></td>
+            <td><div class="feature-name">Self-hostable + server persistence</div><div class="feature-detail">SQLite, your data stays on your machine</div></td>
             <td class="hl-col"><span class="check">✓</span></td>
             <td><span class="cross">✗</span></td>
             <td><span class="cross">✗</span></td>
@@ -848,12 +1014,16 @@
         <ul class="price-features">
           <li><span class="pf-icon check">✓</span> All 10 coins in cockpit</li>
           <li><span class="pf-icon check">✓</span> <strong>Multi-timeframe signals</strong> (1H/4H/1D)</li>
-          <li><span class="pf-icon check">✓</span> <strong>AI Trade Engine</strong> (LLM reasoning)</li>
-          <li><span class="pf-icon check">✓</span> <strong>Polymarket odds</strong> per coin</li>
-          <li><span class="pf-icon check">✓</span> <strong>Kelly position sizer</strong></li>
-          <li><span class="pf-icon check">✓</span> Macro sentiment dashboard</li>
-          <li><span class="pf-icon check">✓</span> On-chain analytics</li>
-          <li><span class="pf-icon check">✓</span> 30-day price history DB</li>
+          <li><span class="pf-icon check">✓</span> <strong>3-Agent AI Council</strong> (Technical + Sentiment + Risk)</li>
+          <li><span class="pf-icon check">✓</span> <strong>Signal Command Center</strong> (SignalBus ranked radar)</li>
+          <li><span class="pf-icon check">✓</span> <strong>Strategy Backtester</strong> (4 strategies + equity curve)</li>
+          <li><span class="pf-icon check">✓</span> <strong>Trade Journal</strong> (P&amp;L, R-multiple, CSV export)</li>
+          <li><span class="pf-icon check">✓</span> <strong>Portfolio Tracker</strong> + Binance API sync</li>
+          <li><span class="pf-icon check">✓</span> <strong>Smart Alerts</strong> + Slack webhook + server cron</li>
+          <li><span class="pf-icon check">✓</span> Performance Dashboard (win rate, profit factor)</li>
+          <li><span class="pf-icon check">✓</span> Polymarket odds · FRED macro feed</li>
+          <li><span class="pf-icon check">✓</span> Live WebSocket ticker (15 assets)</li>
+          <li><span class="pf-icon check">✓</span> Server-side SQLite persistence</li>
           <li><span class="pf-icon check">✓</span> Priority email support</li>
         </ul>
         <a href="#waitlist" class="btn btn-primary" style="width:100%;justify-content:center" onclick="document.getElementById('waitlist').scrollIntoView({behavior:'smooth'});return false;">Get Pro — $20/mo →</a>
@@ -902,7 +1072,7 @@
 
       <div class="testi-card">
         <div class="testi-stars">★★★★★</div>
-        <div class="testi-quote">"I used to have TradingView + Coinstats + a separate Kelly calculator open at the same time. Now it's all one tab. The MTF signal row alone is worth it."</div>
+        <div class="testi-quote">"The 3-agent AI council is a game changer. Watching the Technical, Sentiment and Risk agents debate a trade before the Chief gives the verdict — I actually understand why I'm entering, not just that I should."</div>
         <div class="testi-author">
           <div class="testi-avatar">A</div>
           <div><div class="testi-name">Ahmed R.</div><div class="testi-role">Retail trader · 4 years</div></div>
@@ -911,7 +1081,7 @@
 
       <div class="testi-card">
         <div class="testi-stars">★★★★★</div>
-        <div class="testi-quote">"The Polymarket integration is genius. When the YES% on a BTC milestone market is 70%+ and the 4H signal is BUY, that's a high-conviction entry. I don't have that combo anywhere else."</div>
+        <div class="testi-quote">"Slack alerts firing from the server even when I'm away from my desk is the feature I didn't know I needed. Caught a BTC breakout on my phone while at dinner. The trade journal logged it automatically too."</div>
         <div class="testi-author">
           <div class="testi-avatar">S</div>
           <div><div class="testi-name">Sara K.</div><div class="testi-role">Crypto fund analyst</div></div>
@@ -920,7 +1090,7 @@
 
       <div class="testi-card">
         <div class="testi-stars">★★★★★</div>
-        <div class="testi-quote">"Self-hosted, all my data stays with me. The SQLite history is exactly what I need for backtesting my strategies. Cancelled my $35/mo tool after the first week."</div>
+        <div class="testi-quote">"The backtester sealed it for me. I ran RSI Mean Reversion on BTC 4H, saw 64% win rate and +18R over 6 months, then actually traded it with confidence. Cancelled my $35/mo tool the same day."</div>
         <div class="testi-author">
           <div class="testi-avatar">M</div>
           <div><div class="testi-name">Marcus T.</div><div class="testi-role">Quant developer</div></div>
@@ -942,47 +1112,52 @@
 
       <div class="faq-item open">
         <button class="faq-q">What's included in the free tier vs Pro? <span class="faq-icon">+</span></button>
-        <div class="faq-a">The free Starter plan gives you access to the coin cockpit for 3 coins with daily signals, exchange comparison and the latest news. Pro ($20/mo) unlocks all 10 coins, multi-timeframe signals (1H/4H/1D), the AI Trade Engine, Polymarket odds, Kelly position sizer, macro sentiment dashboard, on-chain analytics and 30-day price history in the database.</div>
+        <div class="faq-a">The free Starter plan gives you the coin cockpit for 3 coins with daily signals, exchange comparison and the latest news. Pro ($20/mo) unlocks everything: all 10 coins, multi-timeframe signals, the 3-Agent AI Council, Signal Command Center, Strategy Backtester, Trade Journal, Portfolio Tracker with Binance sync, Smart Alerts with Slack webhooks, Performance Dashboard, FRED macro feed, live WebSocket ticker and server-side SQLite persistence.</div>
       </div>
 
       <div class="faq-item">
-        <button class="faq-q">Can I cancel at any time? <span class="faq-icon">+</span></button>
-        <div class="faq-a">Yes — cancel any time from your account settings with one click. Your access continues until the end of the billing period you've already paid for. We also offer a 7-day full refund if you're not satisfied, no questions asked.</div>
+        <button class="faq-q">How does the 3-Agent AI Council work? <span class="faq-icon">+</span></button>
+        <div class="faq-a">Three specialist agents run in parallel for every analysis: the Technical Analyst scores RSI, MACD and ADX rule-based signals; the Sentiment Analyst reads the SignalBus and Fear &amp; Greed index; the Risk Manager checks volatility and computes Kelly sizing. A Chief Analyst then takes a weighted vote across all three and produces the final BUY/SELL/HOLD verdict with a Quarter-Kelly position size recommendation.</div>
+      </div>
+
+      <div class="faq-item">
+        <button class="faq-q">Will my Slack alerts fire if I close my browser? <span class="faq-icon">+</span></button>
+        <div class="faq-a">Yes. TraderPro runs a server-side alert cron every 60 seconds that checks all your active alerts against live Binance prices — completely independent of your browser. When a condition triggers, the server POSTs directly to your Slack webhook so you get notified even if the tab is closed or you're away from your desk.</div>
+      </div>
+
+      <div class="faq-item">
+        <button class="faq-q">How does the Strategy Backtester work? <span class="faq-icon">+</span></button>
+        <div class="faq-a">Choose one of 4 strategies (RSI Mean Reversion, MA Crossover, MACD Signal Cross, Bollinger Squeeze Breakout), pick a coin and timeframe, and the backtester fetches real Binance kline history. It simulates every entry and exit with your chosen stop-loss and take-profit percentages, then shows win rate, total R, max drawdown and a canvas equity curve against a buy-and-hold baseline.</div>
+      </div>
+
+      <div class="faq-item">
+        <button class="faq-q">How does Binance portfolio sync work? <span class="faq-icon">+</span></button>
+        <div class="faq-a">Enter your Binance read-only API key and secret in Settings. The server signs the account balance request with HMAC-SHA256 on your behalf — your secret never leaves the server and is never exposed to the browser. Stablecoins are skipped automatically and imported holdings are merged with any manually entered positions.</div>
       </div>
 
       <div class="faq-item">
         <button class="faq-q">Do I need any API keys to use TraderPro? <span class="faq-icon">+</span></button>
-        <div class="faq-a">No. Every core feature — prices, signals, Fear &amp; Greed, Polymarket odds, exchange comparison — works with zero API keys. The only optional key is OpenRouter for the AI LLM reasoning engine, which has a generous free tier.</div>
+        <div class="faq-a">No. Every core feature — prices, signals, Fear &amp; Greed, Polymarket odds, exchange comparison, backtester, trade journal — works with zero API keys. Optional keys unlock extra power: OpenRouter for the AI Council, FRED for macro data, Slack for alert notifications, and Binance read-only for portfolio sync.</div>
       </div>
 
       <div class="faq-item">
         <button class="faq-q">How do the multi-timeframe signals work? <span class="faq-icon">+</span></button>
-        <div class="faq-a">For each timeframe (1H, 4H, 1D), TraderPro fetches the last 50–60 candles from Binance, computes RSI(14), SMA20/50, MACD(12,26,9) and volume ratio, then scores each indicator. A weighted consensus (1D has 3× weight, 4H 2×, 1H 1×) determines the overall direction. All computation is client-side — no third-party signal service.</div>
-      </div>
-
-      <div class="faq-item">
-        <button class="faq-q">Why does the server proxy requests instead of the browser calling APIs directly? <span class="faq-icon">+</span></button>
-        <div class="faq-a">Browser-direct calls to CoinGecko, Alternative.me and others frequently hit 429 rate limits, especially with multiple users or tabs open. The server caches responses (e.g., Fear &amp; Greed for 10 min, Binance tickers for 20s) and uses exponential backoff retry, so users always get data even when upstream APIs are busy.</div>
-      </div>
-
-      <div class="faq-item">
-        <button class="faq-q">How do I run it in production? <span class="faq-icon">+</span></button>
-        <div class="faq-a">Copy .env.example to .env, generate a strong SESSION_SECRET, set NODE_ENV=production. Then run <code style="background:var(--bg3);padding:0.1rem 0.4rem;border-radius:4px">pm2 start ecosystem.config.js --env production</code>. PM2 will run in cluster mode across all CPU cores with automatic restart on crash and log rotation. For HTTPS, put nginx in front as a reverse proxy.</div>
+        <div class="faq-a">For each timeframe (1H, 4H, 1D), TraderPro fetches the last 50–60 candles from Binance, computes RSI(14), SMA20/50, MACD(12,26,9) and volume ratio, then scores each indicator. A weighted consensus (1D has 3× weight, 4H 2×, 1H 1×) determines the overall direction. All computation is client-side — no third-party signal service. Signals are also emitted to the SignalBus for the Command Center to pick up.</div>
       </div>
 
       <div class="faq-item">
         <button class="faq-q">Is my trading data private? <span class="faq-icon">+</span></button>
-        <div class="faq-a">Yes. TraderPro is self-hosted — your portfolio snapshots, trade signals and historical prices are stored in a local SQLite database on your own machine. Nothing is sent to any third-party analytics service.</div>
+        <div class="faq-a">Yes. TraderPro is self-hosted — your journal trades, portfolio holdings, alerts and API keys are stored in a SQLite database on your own machine. Nothing is sent to any third-party analytics service. Binance API secrets are stored server-side only and masked in all UI displays.</div>
+      </div>
+
+      <div class="faq-item">
+        <button class="faq-q">How do I run it in production? <span class="faq-icon">+</span></button>
+        <div class="faq-a">Copy .env.example to .env, generate a strong SESSION_SECRET, set NODE_ENV=production. Then run <code style="background:var(--bg3);padding:0.1rem 0.4rem;border-radius:4px">pm2 start ecosystem.config.js --env production</code>. PM2 runs in cluster mode with automatic restart and log rotation. The server-side alert cron starts automatically on boot. For HTTPS, put nginx in front as a reverse proxy.</div>
       </div>
 
       <div class="faq-item">
         <button class="faq-q">Does it work on mobile? <span class="faq-icon">+</span></button>
-        <div class="faq-a">Yes. The dashboard is responsive and includes a PWA manifest so you can install it as an app on iOS and Android. The coin cockpit, signals and position sizer all work on small screens.</div>
-      </div>
-
-      <div class="faq-item">
-        <button class="faq-q">Can I add more coins? <span class="faq-icon">+</span></button>
-        <div class="faq-a">The cockpit currently tracks 10 major coins (BTC, ETH, SOL, BNB, XRP, ADA, AVAX, DOGE, DOT, LINK). Adding more is a matter of extending the COINS array in cockpit.js with the Binance pair and CoinGecko ID. A full coin search using CoinGecko's 10,000+ coin catalog is also available in the market scanner.</div>
+        <div class="faq-a">Yes. The dashboard is responsive and includes a PWA manifest so you can install it as an app on iOS and Android. The ticker strip, cockpit, trade journal and portfolio tracker all adapt to small screens.</div>
       </div>
 
     </div>
@@ -993,8 +1168,8 @@
 <section class="cta-section" id="waitlist">
   <div class="container">
     <div class="section-label"><span class="badge badge-gold">🎉 Early Bird</span></div>
-    <h2>Lock in $20/mo before launch</h2>
-    <p>Join the waitlist. First 200 subscribers get <strong style="color:var(--green)">30% off for life</strong> — $14/mo forever.</p>
+    <h2>The complete trading OS — $20/mo</h2>
+    <p>Join the waitlist. First 200 subscribers get <strong style="color:var(--green)">30% off for life</strong> — $14/mo forever. AI council, backtester, journal, portfolio tracker, Slack alerts all included.</p>
 
     <form class="waitlist-form" id="waitlist-form" onsubmit="submitWaitlist(event)">
       <input
@@ -1028,7 +1203,7 @@
   <div class="footer-grid">
     <div class="footer-brand">
       <div class="nav-logo" style="font-size:1.3rem">Trader<span style="color:var(--accent)">Pro</span></div>
-      <p>The all-in-one crypto intelligence portal. Multi-timeframe signals, AI reasoning, exchange arbitrage and prediction market odds — one dashboard.</p>
+      <p>The complete crypto trading OS. Signal Command Center, 3-agent AI council, strategy backtester, trade journal, portfolio tracker with Binance sync, smart Slack alerts — one dashboard, zero switching.</p>
     </div>
     <div class="footer-col">
       <h4>Product</h4>
@@ -1167,6 +1342,145 @@
       }
     });
   }, { passive: true });
+
+  // ── Particle network canvas ────────────────────────────────────────
+  (function () {
+    const canvas = document.getElementById('particle-canvas');
+    const ctx    = canvas.getContext('2d');
+    let W, H, particles = [];
+    const COUNT = 80, MAX_DIST = 130;
+    const COLORS = ['#5b72ff','#a855f7','#00d4ff','#00e87a'];
+
+    function resize() {
+      W = canvas.width  = window.innerWidth;
+      H = canvas.height = window.innerHeight;
+    }
+    resize();
+    window.addEventListener('resize', resize);
+
+    for (let i = 0; i < COUNT; i++) {
+      particles.push({
+        x: Math.random() * window.innerWidth,
+        y: Math.random() * window.innerHeight,
+        vx: (Math.random() - 0.5) * 0.4,
+        vy: (Math.random() - 0.5) * 0.4,
+        r: Math.random() * 1.8 + 0.5,
+        color: COLORS[Math.floor(Math.random() * COLORS.length)],
+        alpha: Math.random() * 0.5 + 0.2,
+      });
+    }
+
+    function draw() {
+      ctx.clearRect(0, 0, W, H);
+      // update positions
+      particles.forEach(p => {
+        p.x += p.vx; p.y += p.vy;
+        if (p.x < 0 || p.x > W) p.vx *= -1;
+        if (p.y < 0 || p.y > H) p.vy *= -1;
+      });
+      // draw connections
+      for (let i = 0; i < particles.length; i++) {
+        for (let j = i + 1; j < particles.length; j++) {
+          const dx = particles[i].x - particles[j].x;
+          const dy = particles[i].y - particles[j].y;
+          const d  = Math.sqrt(dx * dx + dy * dy);
+          if (d < MAX_DIST) {
+            ctx.beginPath();
+            ctx.moveTo(particles[i].x, particles[i].y);
+            ctx.lineTo(particles[j].x, particles[j].y);
+            const fade = 1 - d / MAX_DIST;
+            ctx.strokeStyle = `rgba(91,114,255,${fade * 0.18})`;
+            ctx.lineWidth = fade * 0.8;
+            ctx.stroke();
+          }
+        }
+      }
+      // draw dots
+      particles.forEach(p => {
+        ctx.beginPath();
+        ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2);
+        ctx.fillStyle = p.color;
+        ctx.globalAlpha = p.alpha;
+        ctx.fill();
+        ctx.globalAlpha = 1;
+      });
+      requestAnimationFrame(draw);
+    }
+    draw();
+  })();
+
+  // ── Scroll reveal ──────────────────────────────────────────────────
+  (function () {
+    const els = document.querySelectorAll('.reveal, .reveal-left');
+    const io  = new IntersectionObserver((entries) => {
+      entries.forEach((e, i) => {
+        if (e.isIntersecting) {
+          // stagger siblings
+          const siblings = Array.from(e.target.parentElement.querySelectorAll('.reveal, .reveal-left'));
+          const idx = siblings.indexOf(e.target);
+          e.target.style.transitionDelay = (idx * 80) + 'ms';
+          e.target.classList.add('visible');
+          io.unobserve(e.target);
+        }
+      });
+    }, { threshold: 0.12 });
+    els.forEach(el => io.observe(el));
+  })();
+
+  // ── Animated stat counters ─────────────────────────────────────────
+  (function () {
+    const statVals = document.querySelectorAll('.stat-val');
+    const io = new IntersectionObserver((entries) => {
+      entries.forEach(e => {
+        if (!e.isIntersecting) return;
+        const el  = e.target;
+        const raw = el.textContent.trim();
+        // parse: "15+", "3", "$20", "70+"
+        const prefix = raw.startsWith('$') ? '$' : '';
+        const suffix = raw.endsWith('+') ? '+' : '';
+        const num    = parseFloat(raw.replace(/[^0-9.]/g, ''));
+        if (isNaN(num)) return;
+        let start = 0, dur = 1200, startTime = null;
+        function step(ts) {
+          if (!startTime) startTime = ts;
+          const prog = Math.min((ts - startTime) / dur, 1);
+          const ease = 1 - Math.pow(1 - prog, 3);
+          const cur  = Math.round(ease * num);
+          el.textContent = prefix + cur + suffix;
+          if (prog < 1) requestAnimationFrame(step);
+          else el.textContent = raw; // restore original
+        }
+        requestAnimationFrame(step);
+        io.unobserve(el);
+      });
+    }, { threshold: 0.5 });
+    statVals.forEach(el => io.observe(el));
+  })();
+
+  // ── sc-panel live-ish number flicker ──────────────────────────────
+  (function () {
+    const priceEls = document.querySelectorAll('.sc-val');
+    priceEls.forEach(el => {
+      setInterval(() => {
+        const orig = el.textContent;
+        if (!orig.startsWith('$')) return;
+        const n = parseFloat(orig.replace(/[^0-9.]/g, ''));
+        if (isNaN(n)) return;
+        const delta  = (Math.random() - 0.5) * n * 0.0004;
+        const newVal = n + delta;
+        const fmt    = newVal >= 1000 ? '$' + Math.round(newVal).toLocaleString()
+                                      : '$' + newVal.toFixed(2);
+        el.textContent = fmt;
+        el.style.animation = 'none';
+        el.style.color = delta >= 0 ? 'var(--green)' : 'var(--red)';
+        el.style.textShadow = delta >= 0
+          ? '0 0 12px rgba(0,232,122,0.5)' : '0 0 12px rgba(255,68,68,0.5)';
+        setTimeout(() => {
+          el.style.color = ''; el.style.textShadow = '';
+        }, 600);
+      }, 2800 + Math.random() * 2000);
+    });
+  })();
 </script>
 
 </body>

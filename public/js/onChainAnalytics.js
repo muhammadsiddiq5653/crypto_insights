@@ -169,26 +169,29 @@ const OnChainAnalytics = {
 
   async fetchWhaleTransactions() {
     try {
-      // Whale Alert public RSS (free)
-      const res = await fetch('/api/onchain/whale-alerts');
+      const res = await fetch(`/api/onchain/whale-alerts?coin=${this.activeCoin}`);
       if (res.ok) {
-        this.data.whaleAlerts = await res.json();
+        const body = await res.json();
+        // Server wraps in { data, _synthetic, _syntheticNote }
+        this.data.whaleAlerts = Array.isArray(body) ? body : (body.data || []);
+        this.data.whaleAlertsMeta = { _synthetic: body._synthetic, _syntheticNote: body._syntheticNote };
         return;
       }
     } catch {}
-    // Synthetic whale data
     this.data.whaleAlerts = this.syntheticWhaleAlerts();
+    this.data.whaleAlertsMeta = { _synthetic: true, _syntheticNote: 'Could not fetch data — showing illustrative placeholder.' };
   },
 
   async fetchExchangeFlow() {
     try {
       const res = await fetch(`/api/onchain/exchange-flow?coin=${this.activeCoin}`);
       if (res.ok) {
-        this.data.exchangeFlow = await res.json();
+        const body = await res.json();
+        this.data.exchangeFlow = body;
         return;
       }
     } catch {}
-    this.data.exchangeFlow = this.syntheticExchangeFlow();
+    this.data.exchangeFlow = { ...this.syntheticExchangeFlow(), _synthetic: true };
   },
 
   async fetchMVRV() {
@@ -322,13 +325,19 @@ const OnChainAnalytics = {
     `;
   },
 
+  syntheticBanner(note) {
+    return `<div class="oca-synthetic-banner">⚠️ <strong>Illustrative data</strong> — ${note || 'Real-time data requires a paid API key.'} Do not make trading decisions based on these figures.</div>`;
+  },
+
   renderWhale() {
     const coin = this.COINS.find(c => c.id === this.activeCoin);
     const alerts = this.data.whaleAlerts || [];
+    const meta = this.data.whaleAlertsMeta || {};
     const byType = {};
     alerts.forEach(a => { byType[a.type] = (byType[a.type] || 0) + 1; });
 
     return `
+      ${meta._synthetic ? this.syntheticBanner(meta._syntheticNote) : ''}
       <div class="oca-section">
         <div class="oca-section-title">🐋 Whale Transaction Feed (${coin.symbol})</div>
         <div class="oca-whale-stats">
@@ -395,6 +404,7 @@ const OnChainAnalytics = {
     const isAccum = ef.netflow < 0;
 
     return `
+      ${ef._synthetic ? this.syntheticBanner(ef._syntheticNote) : (ef._exchangeBreakdownNote ? `<div class="oca-info-banner">ℹ️ ${ef._exchangeBreakdownNote}</div>` : '')}
       <div class="oca-exchange-layout">
         <div class="oca-exchange-main">
           <div class="oca-section-title">🏦 Exchange Netflow (${coin.symbol} · 24h)</div>
@@ -638,6 +648,8 @@ const OnChainAnalytics = {
     s.id = 'oca-styles';
     s.textContent = `
       .oca-page { padding: 0; }
+      .oca-synthetic-banner { background:rgba(245,158,11,0.12); border:1px solid rgba(245,158,11,0.3); border-radius:8px; color:#fbbf24; padding:0.625rem 1rem; font-size:0.8125rem; margin-bottom:1rem; line-height:1.5; }
+      .oca-info-banner { background:rgba(99,120,220,0.1); border:1px solid rgba(99,120,220,0.25); border-radius:8px; color:var(--color-text-secondary); padding:0.625rem 1rem; font-size:0.8125rem; margin-bottom:1rem; line-height:1.5; }
       .oca-header { display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:1.25rem; flex-wrap:wrap; gap:1rem; }
       .oca-title { font-size:1.5rem; font-weight:800; letter-spacing:-0.03em; margin-bottom:0.25rem; }
       .oca-subtitle { color:var(--color-text-muted); font-size:0.8125rem; }

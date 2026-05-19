@@ -7,6 +7,16 @@
  * Falls back to a rule-based local engine if no API key is set.
  */
 const LLMTradeEngine = (() => {
+  function esc(s) { return String(s ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;'); }
+
+  // Safe markdown converter: escapes text first, THEN applies only bold/newline transforms
+  function safeMd(s) {
+    return esc(s)
+      .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
+      .replace(/\n\n/g, '</p><p>')
+      .replace(/\n/g, '<br/>');
+  }
+
   let initialised = false;
   let apiKey = '';
   let analysisHistory = [];
@@ -283,24 +293,32 @@ Provide a complete trade analysis with signal, confidence, key reasons, and trad
 
       <!-- Result Panel -->
       <div id="llm-result-panel" style="display:none">
-        <!-- Signal banner -->
+        <!-- Chief Analyst verdict -->
         <div class="llm-signal-banner" id="llm-signal-banner"></div>
 
+        <!-- Agent Council -->
+        <div class="agent-council" id="agent-council">
+          <div class="agent-council-title">🤖 Agent Council — 3 Specialists + Chief Analyst</div>
+          <div class="agent-council-grid" id="agent-council-grid"></div>
+        </div>
+
+        <!-- Signal Bus context used by agents -->
+        <div class="agent-bus-context" id="agent-bus-context" style="display:none">
+          <div class="abc-title">📡 Signal Bus Context (fed to agents)</div>
+          <div class="abc-body" id="agent-bus-body"></div>
+        </div>
+
         <div class="llm-result-grid">
-          <!-- Score cards -->
           <div class="card">
             <div class="card-header">Technical Scores</div>
             <div class="card-body" id="llm-scores-body"></div>
           </div>
-
-          <!-- Reasoning -->
           <div class="card">
-            <div class="card-header" id="llm-reasoning-header">AI Reasoning</div>
+            <div class="card-header" id="llm-reasoning-header">Chief Analyst Reasoning</div>
             <div class="card-body" id="llm-reasoning-body"></div>
           </div>
         </div>
 
-        <!-- Full analysis text -->
         <div class="card llm-analysis-card">
           <div class="card-header">Full Analysis</div>
           <div class="card-body llm-analysis-text" id="llm-analysis-text"></div>
@@ -331,11 +349,11 @@ Provide a complete trade analysis with signal, confidence, key reasons, and trad
 
     banner.innerHTML = `
       <div class="llm-banner-inner" style="border-color:${result.signalColor}20;background:${result.signalColor}08">
-        <div class="llm-banner-signal" style="color:${result.signalColor}">${result.signal}</div>
+        <div class="llm-banner-signal" style="color:${result.signalColor}">${esc(result.signal)}</div>
         <div class="llm-banner-details">
-          <div class="llm-banner-symbol">${result.symbol.replace('USDT','')} at $${result.price.toLocaleString('en',{maximumFractionDigits:2})}</div>
-          <div class="llm-banner-conf">Confidence: <strong style="color:${result.signalColor}">${result.confidence}%</strong></div>
-          <div class="llm-banner-source" style="color:var(--color-text-muted);font-size:0.75rem">Source: ${result.source} · ${new Date(result.timestamp).toLocaleTimeString()}</div>
+          <div class="llm-banner-symbol">${esc(result.symbol.replace('USDT',''))} at $${result.price.toLocaleString('en',{maximumFractionDigits:2})}</div>
+          <div class="llm-banner-conf">Confidence: <strong style="color:${result.signalColor}">${esc(result.confidence)}%</strong></div>
+          <div class="llm-banner-source" style="color:var(--color-text-muted);font-size:0.75rem">Source: ${esc(result.source)} · ${new Date(result.timestamp).toLocaleTimeString()}</div>
         </div>
         <div class="llm-bull-bear-bar">
           <div class="llm-bull-seg" style="width:${(result.bullishScore/(result.bullishScore+result.bearishScore))*100}%"></div>
@@ -372,8 +390,8 @@ Provide a complete trade analysis with signal, confidence, key reasons, and trad
           <div class="llm-indicator-item">
             <span class="llm-ind-dot" style="background:${r.bias==='BULLISH'?'#2dd882':r.bias==='BEARISH'?'#ff5f57':r.bias==='WARNING'?'#f59e0b':'#6378dc'}"></span>
             <div class="llm-ind-text">
-              <div class="llm-ind-name">${r.factor}</div>
-              <div class="llm-ind-detail">${r.detail}</div>
+              <div class="llm-ind-name">${esc(r.factor)}</div>
+              <div class="llm-ind-detail">${esc(r.detail)}</div>
             </div>
             ${r.weight > 0 ? `<span class="llm-ind-weight" style="color:${r.bias==='BULLISH'?'#2dd882':'#ff5f57'}">+${r.weight}</span>` : ''}
           </div>
@@ -387,28 +405,16 @@ Provide a complete trade analysis with signal, confidence, key reasons, and trad
     const header = document.getElementById('llm-reasoning-header');
     if (!body) return;
 
-    if (header) header.textContent = result.source === 'Local Rule Engine' ? 'Rule-Based Reasoning' : '🤖 AI Reasoning (Mistral-7B)';
+    if (header) header.textContent = result.source?.includes('Agent Council') ? '🤖 Chief Analyst Synthesis' : result.source === 'Local Rule Engine' ? 'Rule-Based Reasoning' : '🤖 AI Reasoning (Mistral-7B)';
 
-    // Render markdown-ish summary
-    const html = result.summary
-      .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
-      .replace(/\n\n/g, '</p><p>')
-      .replace(/\n/g, '<br/>');
-
-    body.innerHTML = `<div class="llm-reasoning-text"><p>${html}</p></div>`;
+    body.innerHTML = `<div class="llm-reasoning-text"><p>${safeMd(result.summary)}</p></div>`;
   }
 
   function renderAnalysisText(result, llmText) {
     const el = document.getElementById('llm-analysis-text');
     if (!el) return;
 
-    const text = llmText || result.summary;
-    const html = text
-      .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
-      .replace(/\n\n/g, '</p><p>')
-      .replace(/\n/g, '<br/>');
-
-    el.innerHTML = `<p>${html}</p>`;
+    el.innerHTML = `<p>${safeMd(llmText || result.summary)}</p>`;
   }
 
   function renderHistory() {
@@ -428,11 +434,11 @@ Provide a complete trade analysis with signal, confidence, key reasons, and trad
           ${analysisHistory.slice(-10).reverse().map(r => `
             <tr>
               <td style="font-size:0.75rem;color:var(--color-text-muted)">${new Date(r.timestamp).toLocaleTimeString()}</td>
-              <td style="font-weight:600">${r.symbol.replace('USDT','')}</td>
+              <td style="font-weight:600">${esc(r.symbol.replace('USDT',''))}</td>
               <td>$${r.price.toLocaleString('en',{maximumFractionDigits:2})}</td>
-              <td style="color:${r.signalColor};font-weight:700">${r.signal}</td>
-              <td>${r.confidence}%</td>
-              <td style="font-size:0.75rem;color:var(--color-text-muted)">${r.source}</td>
+              <td style="color:${r.signalColor};font-weight:700">${esc(r.signal)}</td>
+              <td>${esc(r.confidence)}%</td>
+              <td style="font-size:0.75rem;color:var(--color-text-muted)">${esc(r.source)}</td>
             </tr>
           `).join('')}
         </tbody>
@@ -454,47 +460,202 @@ Provide a complete trade analysis with signal, confidence, key reasons, and trad
     }
   }
 
+  // ── Multi-Agent Council ───────────────────────────────────────────────
+
+  function agentTechnical(indicators, symbol, price) {
+    const result = ruleBasedAnalysis(indicators, symbol, price);
+    const verdict = result.signal === '🟢 LONG' ? 'LONG' : result.signal === '🔴 SHORT' ? 'SHORT' : 'NEUTRAL';
+    return {
+      id: 'technical', name: 'Technical Analyst', icon: '📊',
+      verdict, confidence: result.confidence,
+      summary: `RSI ${indicators.rsi?.toFixed(1) || '?'} · MACD ${result.reasons.find(r=>r.factor==='MACD')?result.reasons.find(r=>r.factor==='MACD').detail:'n/a'} · ADX ${indicators.adx?.toFixed(0)||'?'}`,
+      reasons: result.reasons.slice(0, 4),
+      bullishScore: result.bullishScore, bearishScore: result.bearishScore,
+    };
+  }
+
+  function agentSentiment(symbol) {
+    const busSignals = (typeof SignalBus !== 'undefined') ? SignalBus.getSignals() : [];
+    const sym = symbol.replace('USDT','');
+    const relevant = busSignals.filter(s =>
+      (s.symbol === sym || s.symbol === symbol) &&
+      (s.source === 'news_sentiment' || s.source === 'polymarket' || s.source === 'onchain')
+    );
+    const fgRaw = localStorage.getItem('fg_index');
+    const fg = fgRaw ? parseInt(fgRaw) : null;
+    const fgLabel = fg === null ? 'unknown' : fg >= 75 ? 'Extreme Greed' : fg >= 55 ? 'Greed' : fg >= 45 ? 'Neutral' : fg >= 25 ? 'Fear' : 'Extreme Fear';
+    const fgBias = fg !== null ? (fg > 55 ? 'LONG' : fg < 45 ? 'SHORT' : 'NEUTRAL') : 'NEUTRAL';
+
+    let bullCount = 0, bearCount = 0;
+    relevant.forEach(s => { if (s.direction === 'LONG') bullCount++; else if (s.direction === 'SHORT') bearCount++; });
+    const verdict = (bullCount > bearCount) ? 'LONG' : (bearCount > bullCount) ? 'SHORT' : fgBias;
+    const conf = Math.min(90, 45 + (Math.abs(bullCount - bearCount) * 10) + (fg ? Math.abs(fg - 50) * 0.4 : 0));
+
+    return {
+      id: 'sentiment', name: 'Sentiment Analyst', icon: '🌐',
+      verdict, confidence: Math.round(conf),
+      summary: `Fear & Greed: ${fg !== null ? fg : 'N/A'} (${fgLabel}) · Bus signals: ${relevant.length}`,
+      reasons: [
+        { factor: 'Fear & Greed', detail: `${fgLabel} (${fg ?? 'N/A'})`, bias: fgBias === 'LONG' ? 'BULLISH' : fgBias === 'SHORT' ? 'BEARISH' : 'NEUTRAL', weight: 0 },
+        { factor: 'News/Poly Signals', detail: `${bullCount} bullish · ${bearCount} bearish from bus`, bias: verdict === 'LONG' ? 'BULLISH' : verdict === 'SHORT' ? 'BEARISH' : 'NEUTRAL', weight: 0 },
+        ...relevant.slice(0,2).map(s => ({ factor: s.source, detail: s.reasons?.[0] || s.direction, bias: s.direction === 'LONG' ? 'BULLISH' : 'BEARISH', weight: 0 })),
+      ],
+      bullishScore: bullCount + (fgBias === 'LONG' ? 2 : 0),
+      bearishScore: bearCount + (fgBias === 'SHORT' ? 2 : 0),
+    };
+  }
+
+  function agentRisk(indicators, symbol, price, technicalResult, sentimentResult) {
+    const volatility = indicators.bb_upper && indicators.bb_lower
+      ? ((indicators.bb_upper - indicators.bb_lower) / price * 100).toFixed(1)
+      : '3.0';
+    const adx = indicators.adx || 20;
+    const trendStrength = adx > 35 ? 'Strong' : adx > 25 ? 'Moderate' : 'Weak';
+    const agree = technicalResult.verdict === sentimentResult.verdict && technicalResult.verdict !== 'NEUTRAL';
+    const kellyFraction = agree ? 0.25 : 0.10;
+    const avgConf = (technicalResult.confidence + sentimentResult.confidence) / 2;
+    const riskVerdict = agree ? technicalResult.verdict : 'NEUTRAL';
+    const riskConf = Math.round(avgConf * (agree ? 1.1 : 0.7));
+
+    return {
+      id: 'risk', name: 'Risk Manager', icon: '🛡️',
+      verdict: riskVerdict, confidence: Math.min(95, riskConf),
+      summary: `Volatility ${volatility}% · Trend ${trendStrength} · Kelly ${(kellyFraction*100).toFixed(0)}% · Agents ${agree?'agree':'disagree'}`,
+      reasons: [
+        { factor: 'Volatility (BB)', detail: `${volatility}% band width — ${parseFloat(volatility) > 5 ? 'high vol, reduce size' : 'normal range'}`, bias: parseFloat(volatility) > 5 ? 'WARNING' : 'NEUTRAL', weight: 0 },
+        { factor: 'Trend Strength', detail: `ADX ${adx.toFixed(0)} — ${trendStrength} trend`, bias: adx > 25 ? 'BULLISH' : 'NEUTRAL', weight: 0 },
+        { factor: 'Agent Consensus', detail: agree ? 'Technical & Sentiment agree — higher conviction' : 'Agents disagree — reduce position', bias: agree ? 'BULLISH' : 'WARNING', weight: 0 },
+        { factor: 'Position Sizing', detail: `Quarter-Kelly: ${(kellyFraction*100).toFixed(0)}% of risk capital`, bias: 'NEUTRAL', weight: 0 },
+      ],
+      bullishScore: agree ? 3 : 0, bearishScore: agree ? 0 : 2,
+      kellyFraction, volatility,
+    };
+  }
+
+  function synthesizeChief(tech, sent, risk, symbol, price) {
+    const votes = { LONG: 0, SHORT: 0, NEUTRAL: 0 };
+    [tech, sent, risk].forEach(a => { votes[a.verdict] = (votes[a.verdict] || 0) + a.confidence; });
+    const verdict = Object.entries(votes).sort((a,b) => b[1]-a[1])[0][0];
+    const conf = Math.round(Math.min(95, (tech.confidence*0.4 + sent.confidence*0.3 + risk.confidence*0.3)));
+    const bull = tech.bullishScore + sent.bullishScore + risk.bullishScore;
+    const bear = tech.bearishScore + sent.bearishScore + risk.bearishScore;
+    const signalColor = verdict === 'LONG' ? '#2dd882' : verdict === 'SHORT' ? '#ff5f57' : '#f59e0b';
+    const summary = `Council verdict: **${verdict}** with ${conf}% conviction.\n\n` +
+      `Technical (${tech.verdict} ${tech.confidence}%) · Sentiment (${sent.verdict} ${sent.confidence}%) · Risk (${risk.verdict} ${risk.confidence}%).\n\n` +
+      `Volatility at ${risk.volatility}% · Kelly sizing ${(risk.kellyFraction*100).toFixed(0)}%. ` +
+      (verdict !== 'NEUTRAL' ? `Entry near $${price.toLocaleString('en',{maximumFractionDigits:2})} with stop ${verdict==='LONG'?'below':'above'} recent swing.` : 'No clear edge — stand aside.');
+    return {
+      signal: verdict === 'LONG' ? '🟢 LONG' : verdict === 'SHORT' ? '🔴 SHORT' : '⚪ NEUTRAL',
+      direction: verdict, confidence: conf, symbol, price,
+      bullishScore: bull, bearishScore: bear, signalColor,
+      source: 'Agent Council (3 Specialists)', timestamp: Date.now(), summary,
+      reasons: [...tech.reasons.slice(0,2), ...sent.reasons.slice(0,2), ...risk.reasons.slice(0,2)],
+    };
+  }
+
+  function renderAgentCouncil(agents) {
+    const grid = document.getElementById('agent-council-grid');
+    const council = document.getElementById('agent-council');
+    if (!grid) return;
+    if (council) council.style.display = 'block';
+
+    grid.innerHTML = agents.map(a => {
+      const col = a.verdict === 'LONG' ? '#2dd882' : a.verdict === 'SHORT' ? '#ff5f57' : '#f59e0b';
+      return `
+        <div class="agent-card" style="border-color:${col}30;background:${col}06">
+          <div class="agent-card-header">
+            <span class="agent-icon">${esc(a.icon)}</span>
+            <div>
+              <div class="agent-name">${esc(a.name)}</div>
+              <div class="agent-verdict" style="color:${col}">${esc(a.verdict)} · ${esc(a.confidence)}%</div>
+            </div>
+            <div class="agent-conf-bar-wrap">
+              <div class="agent-conf-bar" style="width:${esc(a.confidence)}%;background:${col}"></div>
+            </div>
+          </div>
+          <div class="agent-summary">${esc(a.summary)}</div>
+          <div class="agent-reasons">
+            ${(a.reasons||[]).slice(0,3).map(r => `
+              <div class="agent-reason-item">
+                <span class="agent-reason-dot" style="background:${r.bias==='BULLISH'?'#2dd882':r.bias==='BEARISH'?'#ff5f57':r.bias==='WARNING'?'#f59e0b':'#888'}"></span>
+                <span class="agent-reason-text">${esc(r.factor)}: ${esc(r.detail)}</span>
+              </div>
+            `).join('')}
+          </div>
+        </div>
+      `;
+    }).join('');
+
+    // Show bus context
+    const busCtx = document.getElementById('agent-bus-context');
+    const busBody = document.getElementById('agent-bus-body');
+    if (busCtx && busBody && typeof SignalBus !== 'undefined') {
+      const ranked = SignalBus.getRanked().slice(0, 5);
+      if (ranked.length) {
+        busCtx.style.display = 'block';
+        busBody.innerHTML = ranked.map(s =>
+          `<span class="abc-chip" style="border-color:${s.direction==='LONG'?'#2dd882':'#ff5f57'}40">${esc(s.symbol)} ${esc(s.direction)} ${esc(s.confidence)}% <em>${esc(s.source)}</em></span>`
+        ).join('');
+      }
+    }
+  }
+
   async function analyze() {
     const symbolEl = document.getElementById('llm-symbol');
     const btn = document.getElementById('btn-llm-analyze');
     const symbol = symbolEl?.value || 'BTCUSDT';
 
-    if (btn) { btn.disabled = true; btn.textContent = '🧠 Analyzing...'; }
+    if (btn) { btn.disabled = true; btn.textContent = '🤖 Council Analyzing...'; }
 
     try {
-      // Fetch live indicators
       const indicators = await fetchLiveIndicators(symbol) || {
         rsi: 50, macd: 0, macdSignal: 0,
         sma20: 50000, sma50: 48000,
         bb_upper: 52000, bb_lower: 48000,
         volume_ratio: 1.0, adx: 22,
-        change_24h: 0.5, price: 50000
+        change_24h: 0.5, price: 50000,
       };
 
       const price = indicators.price;
       delete indicators.price;
 
-      // Local rule-based analysis (always runs)
-      const result = ruleBasedAnalysis(indicators, symbol, price);
+      // Run 3 specialist agents
+      const tech = agentTechnical(indicators, symbol, price);
+      const sent = agentSentiment(symbol);
+      const risk = agentRisk(indicators, symbol, price, tech, sent);
+      const agents = [tech, sent, risk];
 
-      // Show results immediately (local)
+      // Chief Analyst synthesis
+      const result = synthesizeChief(tech, sent, risk, symbol, price);
+
+      // Show panel
       const panel = document.getElementById('llm-result-panel');
       if (panel) panel.style.display = 'block';
 
+      renderAgentCouncil(agents);
       renderSignalBanner(result);
       renderScores(result);
       renderReasoning(result);
       renderAnalysisText(result, null);
 
-      // If API key exists, also call LLM for enhanced reasoning
+      // Optional LLM enhancement
       if (apiKey) {
         const prompt = buildPrompt(symbol, price, indicators);
         const llmText = await callOpenRouter(prompt);
         if (llmText) {
-          result.source = 'Mistral-7B (OpenRouter)';
+          result.source = 'Agent Council + Mistral-7B';
           renderSignalBanner(result);
           renderAnalysisText(result, llmText);
         }
+      }
+
+      // Emit to SignalBus
+      if (typeof SignalBus !== 'undefined' && result.direction !== 'NEUTRAL') {
+        SignalBus.emit({
+          symbol: symbol.replace('USDT',''), direction: result.direction,
+          confidence: result.confidence, source: 'ml_prediction', price,
+          reasons: result.reasons.slice(0,3).map(r => r.detail || r.factor),
+        });
       }
 
       analysisHistory.push(result);
@@ -630,5 +791,40 @@ Provide a complete trade analysis with signal, confidence, key reasons, and trad
     renderSection();
   }
 
-  return { init, analyze, saveKey };
+  // ── Signal bridge: analyze a SignalBus signal object ─────────────────
+  // Returns a promise resolving to { result, agents, llmText, symbol, price }
+
+  async function analyzeSignal(signal) {
+    const sym = (signal.symbol || 'BTC').replace('USDT', '').toUpperCase();
+    const symbolFull = sym + 'USDT';
+    const fallbackPrice = signal.price || 50000;
+
+    const raw = await fetchLiveIndicators(symbolFull);
+    const indicators = raw || {
+      rsi: 50, macd: 0, macdSignal: 0,
+      sma20: fallbackPrice * 0.97, sma50: fallbackPrice * 0.95,
+      bb_upper: fallbackPrice * 1.03, bb_lower: fallbackPrice * 0.97,
+      volume_ratio: 1.0, adx: 22, change_24h: 0.5, price: fallbackPrice,
+    };
+
+    const price = indicators.price || fallbackPrice;
+    const indNoPrice = Object.assign({}, indicators);
+    delete indNoPrice.price;
+
+    const tech   = agentTechnical(indNoPrice, symbolFull, price);
+    const sent   = agentSentiment(symbolFull);
+    const risk   = agentRisk(indNoPrice, symbolFull, price, tech, sent);
+    const result = synthesizeChief(tech, sent, risk, symbolFull, price);
+
+    let llmText = null;
+    if (apiKey) {
+      const prompt = buildPrompt(symbolFull, price, indNoPrice);
+      llmText = await callOpenRouter(prompt);
+      if (llmText) result.source = 'Agent Council + Mistral-7B';
+    }
+
+    return { result, agents: [tech, sent, risk], llmText, symbol: sym, price };
+  }
+
+  return { init, analyze, analyzeSignal, saveKey };
 })();

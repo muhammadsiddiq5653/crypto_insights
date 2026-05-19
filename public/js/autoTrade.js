@@ -441,7 +441,7 @@ const AutoTrade = {
     txt.innerHTML = `<span class="at-spinner"></span> Fetching ${symbol} data & running ${strategy}…`;
 
     try {
-      const resp = await fetch('/api/autotrade/backtest', {
+      const resp = await AuthUtils.apiFetch('/api/autotrade/backtest', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ strategy, symbol, timeframe, start, cash, maxDrawdownLimit: maxDD, minSharpe, maxLeverage: leverage })
@@ -593,7 +593,7 @@ const AutoTrade = {
       thoughts,
     };
     try {
-      await fetch('/api/autotrade/results', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(payload) });
+      await AuthUtils.apiFetch('/api/autotrade/results', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(payload) });
       const btn = document.getElementById('at-save-btn');
       btn.textContent = '✅ Saved!';
       setTimeout(() => { btn.textContent = '💾 Save to Experiment Log'; }, 2000);
@@ -633,7 +633,7 @@ const AutoTrade = {
     const desc = document.getElementById('at-new-desc')?.value?.trim();
     if (!name) { alert('Please enter a strategy name.'); return; }
     try {
-      const r = await fetch('/api/autotrade/strategy/create', {
+      const r = await AuthUtils.apiFetch('/api/autotrade/strategy/create', {
         method:'POST', headers:{'Content-Type':'application/json'},
         body: JSON.stringify({ name, description: desc || 'Custom strategy' })
       }).then(r => r.json());

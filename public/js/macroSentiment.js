@@ -139,6 +139,101 @@ const MacroSentiment = (() => {
     return { score: Math.round(score), label, color, trend: trend.toFixed(1), tradeNote };
   }
 
+  // ── FRED real macro data ──────────────────────────────────────────────
+
+  async function fetchFREDData() {
+    try {
+      const res = await fetch('/api/proxy/fred', { credentials: 'include', signal: AbortSignal.timeout(10000) });
+      const json = await res.json();
+      if (json.success && json.data?.length) return json.data;
+    } catch (e) {}
+    return null; // null = API not available, will hide panel or show unavailable
+  }
+
+  function renderFREDPanel(indicators) {
+    const body   = document.getElementById('fred-body');
+    const status = document.getElementById('fred-status');
+    if (!body) return;
+
+    if (!indicators || !indicators.length) {
+      if (status) { status.textContent = 'Add FRED_API_KEY to .env for live data'; status.style.color = '#f59e0b'; }
+      body.innerHTML = `<div style="padding:1rem;color:var(--color-text-muted);font-size:0.85rem">
+        FRED data requires a free API key at <a href="https://fred.stlouisfed.org/docs/api/api_key.html" target="_blank" style="color:#667eea">fred.stlouisfed.org</a>.
+        Add <code style="background:var(--color-bg-tertiary);padding:0.1rem 0.4rem;border-radius:3px">FRED_API_KEY=your_key</code> to your <code>.env</code> file.
+      </div>`;
+      return;
+    }
+
+    if (status) { status.textContent = '● Live'; status.style.color = '#2dd882'; }
+
+    // Trading implications per indicator
+    const implications = {
+      FEDFUNDS:  v => v > 5   ? { bias: 'BEARISH', note: 'High rates = expensive capital, risk-off' }
+                    : v < 2   ? { bias: 'BULLISH', note: 'Low rates = risk-on, cheap liquidity' }
+                              : { bias: 'NEUTRAL',  note: 'Moderate rate environment' },
+      CPIAUCSL:  v => v > 4   ? { bias: 'BEARISH', note: 'High inflation → Fed hawkish → risk-off' }
+                    : v < 2   ? { bias: 'BULLISH', note: 'Low inflation → rate cuts possible' }
+                              : { bias: 'NEUTRAL',  note: 'Inflation in target range' },
+      UNRATE:    v => v > 5   ? { bias: 'BEARISH', note: 'High unemployment → economic stress' }
+                    : v < 4   ? { bias: 'BULLISH', note: 'Strong jobs market → consumer spending' }
+                              : { bias: 'NEUTRAL',  note: 'Employment near natural rate' },
+      A191RL1Q225SBEA: v => v > 3 ? { bias: 'BULLISH', note: 'Strong GDP growth → risk-on' }
+                          : v < 0 ? { bias: 'BEARISH', note: 'Negative GDP → recession signal' }
+                                  : { bias: 'NEUTRAL',  note: 'Moderate growth' },
+      T10YIE:    v => v > 3   ? { bias: 'BEARISH', note: 'Elevated inflation expectations' }
+                              : { bias: 'BULLISH', note: 'Inflation expectations anchored' },
+      DGS10:     v => v > 5   ? { bias: 'BEARISH', note: 'High yields compete with risk assets' }
+                    : v < 3   ? { bias: 'BULLISH', note: 'Low yields push capital to risk assets' }
+                              : { bias: 'NEUTRAL',  note: 'Yields in normal range' },
+    };
+
+    body.innerHTML = `
+      <div class="fred-grid">
+        ${indicators.map(ind => {
+          const impl = implications[ind.id]?.(ind.value) || { bias: 'NEUTRAL', note: '' };
+          const biasColor = impl.bias === 'BULLISH' ? '#2dd882' : impl.bias === 'BEARISH' ? '#ff5f57' : '#f59e0b';
+          const arrow = ind.change > 0 ? '↑' : ind.change < 0 ? '↓' : '→';
+          const arrowColor = ind.signal === 'rate' || ind.signal === 'inflation'
+            ? (ind.change > 0 ? '#ff5f57' : '#2dd882')
+            : (ind.change > 0 ? '#2dd882' : '#ff5f57');
+          return `
+            <div class="fred-card">
+              <div class="fred-card-label">${ind.label}</div>
+              <div class="fred-card-val">
+                ${ind.value.toFixed(2)}${ind.unit}
+                <span style="color:${arrowColor};font-size:0.75rem;margin-left:4px">${arrow} ${Math.abs(ind.change).toFixed(2)}</span>
+              </div>
+              <div class="fred-card-date">as of ${ind.date}</div>
+              <div class="fred-card-bias" style="color:${biasColor}">${impl.bias}</div>
+              <div class="fred-card-note">${impl.note}</div>
+            </div>
+          `;
+        }).join('')}
+      </div>
+      <div class="fred-footer">
+        Source: Federal Reserve Bank of St. Louis (FRED) · Updates hourly
+      </div>
+    `;
+
+    // Emit macro bias to SignalBus
+    if (typeof SignalBus !== 'undefined') {
+      const bullish = indicators.filter(i => {
+        const impl = implications[i.id]?.(i.value);
+        return impl?.bias === 'BULLISH';
+      }).length;
+      const bearish = indicators.filter(i => {
+        const impl = implications[i.id]?.(i.value);
+        return impl?.bias === 'BEARISH';
+      }).length;
+      const dir = bullish > bearish + 1 ? 'LONG' : bearish > bullish + 1 ? 'SHORT' : 'NEUTRAL';
+      const conf = Math.round(50 + Math.abs(bullish - bearish) * 8);
+      const reasons = indicators.map(i => `${i.label}: ${i.value.toFixed(2)}${i.unit}`);
+      ['BTC', 'ETH', 'SOL'].forEach(sym => {
+        SignalBus.emit({ symbol: sym, direction: dir, confidence: conf, source: 'onchain', reasons });
+      });
+    }
+  }
+
   // ── HTML rendering ────────────────────────────────────────────────────
 
   function renderSection() {
@@ -194,6 +289,17 @@ const MacroSentiment = (() => {
           <div class="card-header">Fear & Greed — 30 Day History</div>
           <div class="card-body">
             <canvas id="fg-history-chart" height="80"></canvas>
+          </div>
+        </div>
+
+        <!-- FRED Macro Indicators -->
+        <div class="card" style="margin-top:1.25rem">
+          <div class="card-header" style="display:flex;justify-content:space-between;align-items:center">
+            <span>📊 Federal Reserve Economic Data (FRED)</span>
+            <span id="fred-status" class="fred-status-badge"></span>
+          </div>
+          <div class="card-body" id="fred-body">
+            <div class="spinner-small"></div>
           </div>
         </div>
 
@@ -416,9 +522,10 @@ const MacroSentiment = (() => {
     if (loading) loading.style.display = 'flex';
     if (content) content.style.display = 'none';
 
-    const [fgData, indicators] = await Promise.all([
+    const [fgData, indicators, fredData] = await Promise.all([
       fetchFearGreed(),
-      fetchMacroIndicators()
+      fetchMacroIndicators(),
+      fetchFREDData(),
     ]);
 
     data.fearGreed = fgData;
@@ -441,6 +548,7 @@ const MacroSentiment = (() => {
     renderFGHistory(fgData);
     renderMacroComposite(composite);
     renderIndicators(indicators);
+    renderFREDPanel(fredData);
     renderSignalMatrix(composite, indicators);
 
     if (loading) loading.style.display = 'none';

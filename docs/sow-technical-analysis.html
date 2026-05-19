@@ -1,0 +1,817 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>TraderPro — SOW & Technical Analysis</title>
+<style>
+  :root {
+    --accent:#5b72ff;--cyan:#00d4ff;--green:#00e87a;--red:#ff5f57;--amber:#f59e0b;
+    --bg:#0a0b0f;--bg2:#10121a;--bg3:#13161f;--border:#1e2435;
+    --text:#e8eaf0;--muted:#6b7280;
+  }
+  *{margin:0;padding:0;box-sizing:border-box}
+  html{scroll-behavior:smooth}
+  body{font-family:'Segoe UI',system-ui,sans-serif;background:var(--bg);color:var(--text);line-height:1.7}
+
+  /* ── LAYOUT ── */
+  .page-wrap{max-width:1200px;margin:0 auto;padding:2rem}
+  .two-col{display:grid;grid-template-columns:260px 1fr;gap:3rem;align-items:start}
+  .sidebar{position:sticky;top:6rem}
+
+  /* ── NAV ── */
+  .topbar{background:#0a0b0fee;backdrop-filter:blur(12px);border-bottom:1px solid var(--border);padding:1rem 2rem;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:100}
+  .topbar-logo{font-weight:800;color:var(--accent);font-size:.9rem;letter-spacing:.1em}
+  .topbar-title{font-size:.82rem;color:var(--muted)}
+  .topbar-date{font-size:.75rem;color:var(--muted)}
+
+  /* ── SIDEBAR NAV ── */
+  .sidenav{background:var(--bg3);border:1px solid var(--border);border-radius:12px;padding:1.25rem;font-size:.82rem}
+  .sidenav-section{font-size:.68rem;font-weight:700;text-transform:uppercase;letter-spacing:.15em;color:var(--muted);margin:1rem 0 .5rem;padding-top:.75rem;border-top:1px solid var(--border)}
+  .sidenav-section:first-child{border-top:none;margin-top:0;padding-top:0}
+  .sidenav a{display:block;padding:.3rem .5rem;color:var(--muted);text-decoration:none;border-radius:5px;transition:all .15s;border-left:2px solid transparent}
+  .sidenav a:hover{color:var(--text);background:#ffffff08;border-left-color:var(--accent)}
+
+  /* ── CONTENT ── */
+  .content section{margin-bottom:4rem;padding-top:2rem}
+  h1.doc-title{font-size:2.5rem;font-weight:900;margin-bottom:.5rem;background:linear-gradient(135deg,#fff,var(--cyan));-webkit-background-clip:text;-webkit-text-fill-color:transparent}
+  h2.sec-title{font-size:1.6rem;font-weight:800;margin-bottom:.25rem;display:flex;align-items:center;gap:.75rem}
+  h2.sec-title .icon{font-size:1.2rem}
+  .sec-divider{height:2px;background:linear-gradient(90deg,var(--accent),transparent);border-radius:1px;margin-bottom:1.75rem}
+  h3{font-size:1.05rem;font-weight:700;margin:1.5rem 0 .75rem;color:var(--text)}
+  p{font-size:.9rem;color:var(--muted);margin-bottom:1rem}
+
+  /* ── TAGS ── */
+  .tag{display:inline-block;padding:.2rem .65rem;border-radius:999px;font-size:.7rem;font-weight:700;border:1px solid}
+  .tag.green{border-color:var(--green);color:var(--green);background:#00e87a0f}
+  .tag.amber{border-color:var(--amber);color:var(--amber);background:#f59e0b0f}
+  .tag.red{border-color:var(--red);color:var(--red);background:#ff5f570f}
+  .tag.blue{border-color:var(--accent);color:var(--accent);background:#5b72ff0f}
+  .tag.cyan{border-color:var(--cyan);color:var(--cyan);background:#00d4ff0f}
+
+  /* ── CARDS ── */
+  .card{background:var(--bg3);border:1px solid var(--border);border-radius:10px;padding:1.25rem;margin-bottom:1rem}
+  .card-accent{border-left:3px solid var(--accent)}
+  .card-green{border-left:3px solid var(--green)}
+  .card-amber{border-left:3px solid var(--amber)}
+  .card-red{border-left:3px solid var(--red)}
+  .card-cyan{border-left:3px solid var(--cyan)}
+
+  /* ── TABLES ── */
+  table{width:100%;border-collapse:collapse;font-size:.84rem;margin-bottom:1.5rem}
+  th{padding:.65rem 1rem;text-align:left;color:var(--muted);font-weight:600;font-size:.72rem;text-transform:uppercase;letter-spacing:.08em;border-bottom:1px solid var(--border);background:#0d0f17}
+  td{padding:.65rem 1rem;border-bottom:1px solid #161924;vertical-align:top}
+  tr:last-child td{border-bottom:none}
+  tr:hover td{background:#ffffff03}
+
+  /* ── STATUS BADGES ── */
+  .status{display:inline-flex;align-items:center;gap:.3rem;font-size:.72rem;font-weight:700;padding:.2rem .65rem;border-radius:999px}
+  .status.done{background:#00e87a14;color:var(--green);border:1px solid #00e87a30}
+  .status.progress{background:#f59e0b14;color:var(--amber);border:1px solid #f59e0b30}
+  .status.todo{background:#5b72ff14;color:var(--accent);border:1px solid #5b72ff30}
+  .status.risk{background:#ff5f5714;color:var(--red);border:1px solid #ff5f5730}
+
+  /* ── SEVERITY ── */
+  .sev{display:inline-block;padding:.15rem .55rem;border-radius:4px;font-size:.7rem;font-weight:800;text-transform:uppercase}
+  .sev.critical{background:#ff5f5720;color:var(--red)}
+  .sev.high{background:#f59e0b20;color:var(--amber)}
+  .sev.medium{background:#5b72ff20;color:var(--accent)}
+  .sev.low{background:#6b728020;color:var(--muted)}
+
+  /* ── CHECKLIST ── */
+  .checklist{list-style:none;font-size:.87rem}
+  .checklist li{display:flex;gap:.75rem;padding:.4rem 0;border-bottom:1px solid #161924;align-items:flex-start}
+  .checklist li:last-child{border-bottom:none}
+  .checklist .ck{flex-shrink:0;width:18px;height:18px;border-radius:4px;display:flex;align-items:center;justify-content:center;font-size:.7rem;font-weight:700;margin-top:1px}
+  .ck.yes{background:#00e87a20;color:var(--green)}
+  .ck.no{background:#ff5f5720;color:var(--red)}
+  .ck.partial{background:#f59e0b20;color:var(--amber)}
+
+  /* ── CODE BLOCK ── */
+  pre{background:#0d0f17;border:1px solid var(--border);border-radius:8px;padding:1.1rem;font-size:.78rem;overflow-x:auto;margin-bottom:1rem;line-height:1.6}
+  code{font-family:'Courier New',monospace;color:#a5f3fc}
+
+  /* ── PROGRESS ── */
+  .progress-bar{height:8px;background:#1a1d28;border-radius:4px;overflow:hidden;margin-bottom:.5rem}
+  .progress-fill{height:100%;border-radius:4px}
+
+  /* ── MILESTONE ── */
+  .milestone{display:grid;grid-template-columns:140px 1fr;gap:1.5rem;margin-bottom:1.5rem;align-items:flex-start}
+  .milestone-date{background:var(--bg3);border:1px solid var(--border);border-radius:8px;padding:.75rem;text-align:center}
+  .milestone-date .mo{font-size:.7rem;color:var(--muted);text-transform:uppercase;letter-spacing:.1em}
+  .milestone-date .yr{font-weight:800;color:var(--accent);font-size:1rem}
+  .milestone-items{display:flex;flex-direction:column;gap:.5rem}
+  .milestone-item{display:flex;align-items:center;gap:.75rem;font-size:.84rem;padding:.4rem 0;border-bottom:1px solid #16192430}
+  .milestone-item:last-child{border-bottom:none}
+
+  /* ── RISK MATRIX ── */
+  .risk-grid{display:grid;grid-template-columns:1fr 1fr;gap:1rem;margin-bottom:1rem}
+
+  /* ── ARCH DIAGRAM ── */
+  .arch-box{background:var(--bg3);border:1px solid var(--border);border-radius:10px;padding:1.25rem;font-size:.82rem;text-align:center}
+  .arch-arrow{text-align:center;color:var(--muted);font-size:1.2rem;padding:.25rem 0}
+  .arch-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:.75rem}
+
+  @media(max-width:900px){
+    .two-col{grid-template-columns:1fr}
+    .sidebar{position:static}
+  }
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <div class="topbar-logo">⬡ TRADERPRO</div>
+  <div class="topbar-title">Statement of Work & Technical Analysis Document</div>
+  <div class="topbar-date">Version 1.0 — May 2026</div>
+</div>
+
+<div class="page-wrap">
+<div class="two-col">
+
+<!-- ══ SIDEBAR ══ -->
+<aside class="sidebar">
+  <nav class="sidenav">
+    <div class="sidenav-section">Executive</div>
+    <a href="#overview">Project Overview</a>
+    <a href="#objectives">Objectives & Scope</a>
+    <a href="#deliverables">Deliverables</a>
+
+    <div class="sidenav-section">Technical</div>
+    <a href="#architecture">System Architecture</a>
+    <a href="#stack">Technology Stack</a>
+    <a href="#features">Feature Inventory</a>
+    <a href="#api">API Catalogue</a>
+    <a href="#database">Database Schema</a>
+
+    <div class="sidenav-section">Security</div>
+    <a href="#security">Security Posture</a>
+    <a href="#audit">Security Audit Results</a>
+    <a href="#remediation">Remediation Log</a>
+
+    <div class="sidenav-section">SOW</div>
+    <a href="#phases">Phase Plan</a>
+    <a href="#timeline">Timeline</a>
+    <a href="#resources">Resources & Cost</a>
+    <a href="#risks">Risk Register</a>
+    <a href="#acceptance">Acceptance Criteria</a>
+  </nav>
+</aside>
+
+<!-- ══ MAIN CONTENT ══ -->
+<main class="content">
+
+  <!-- COVER -->
+  <section id="overview" style="padding-top:0">
+    <h1 class="doc-title">TraderPro Platform</h1>
+    <p style="font-size:1rem;color:var(--text);margin-bottom:2rem">Statement of Work · Technical Analysis · Security Audit</p>
+
+    <div class="card card-accent" style="display:grid;grid-template-columns:repeat(3,1fr);gap:1.5rem">
+      <div><div style="font-size:.7rem;color:var(--muted);text-transform:uppercase;letter-spacing:.1em;margin-bottom:.3rem">Client</div><div style="font-weight:700">TraderPro Inc.</div></div>
+      <div><div style="font-size:.7rem;color:var(--muted);text-transform:uppercase;letter-spacing:.1em;margin-bottom:.3rem">Document Date</div><div style="font-weight:700">May 7, 2026</div></div>
+      <div><div style="font-size:.7rem;color:var(--muted);text-transform:uppercase;letter-spacing:.1em;margin-bottom:.3rem">Version</div><div style="font-weight:700">1.0 — Post Phase 1</div></div>
+      <div><div style="font-size:.7rem;color:var(--muted);text-transform:uppercase;letter-spacing:.1em;margin-bottom:.3rem">Status</div><div><span class="status done">✓ Phase 1 Complete</span></div></div>
+      <div><div style="font-size:.7rem;color:var(--muted);text-transform:uppercase;letter-spacing:.1em;margin-bottom:.3rem">Next Milestone</div><div><span class="status progress">Phase 2 In Scope</span></div></div>
+      <div><div style="font-size:.7rem;color:var(--muted);text-transform:uppercase;letter-spacing:.1em;margin-bottom:.3rem">Classification</div><div style="font-weight:700;color:var(--red)">Confidential</div></div>
+    </div>
+
+    <h3>Executive Summary</h3>
+    <p>TraderPro is a production-ready, full-stack crypto trading platform built over approximately 6 months of active development. The platform integrates 13 external data providers, 108 REST API endpoints, 19 database tables across two SQLite instances, and 40+ user-facing features spanning technical analysis, on-chain data, AI reasoning, backtesting, portfolio management, and localised market data for Pakistan and emerging markets.</p>
+    <p>This document serves as (1) the Statement of Work for Phase 2 development, (2) a comprehensive technical analysis of the current system, and (3) a complete security audit report with remediation status.</p>
+  </section>
+
+  <!-- OBJECTIVES -->
+  <section id="objectives">
+    <h2 class="sec-title"><span class="icon">🎯</span> Objectives & Scope</h2>
+    <div class="sec-divider"></div>
+
+    <h3>Phase 1 Objectives (Completed)</h3>
+    <ul class="checklist">
+      <li><div class="ck yes">✓</div><div><strong>Core trading dashboard</strong> — Signal Radar, Command Center, live tickers</div></li>
+      <li><div class="ck yes">✓</div><div><strong>User authentication system</strong> — Registration, login, password reset, TOTP 2FA</div></li>
+      <li><div class="ck yes">✓</div><div><strong>Portfolio & Trade Journal</strong> — Holdings tracker, P&L, trade log with CSV export</div></li>
+      <li><div class="ck yes">✓</div><div><strong>Alert engine</strong> — Client + server-side price/RSI alerts with Slack relay</div></li>
+      <li><div class="ck yes">✓</div><div><strong>AI Agent Council</strong> — Multi-agent LLM reasoning with Mistral-7B via OpenRouter</div></li>
+      <li><div class="ck yes">✓</div><div><strong>Backtester</strong> — Strategy simulation with Sharpe/Calmar scoring (Python microservice)</div></li>
+      <li><div class="ck yes">✓</div><div><strong>On-chain analytics</strong> — Whale alerts, exchange flow, liquidation heatmaps</div></li>
+      <li><div class="ck yes">✓</div><div><strong>Macro dashboard</strong> — FRED integration (Fed Funds, CPI, GDP, yields)</div></li>
+      <li><div class="ck yes">✓</div><div><strong>PSX + PKR market data</strong> — KSE-100/30, local stocks, Pakistan forex</div></li>
+      <li><div class="ck yes">✓</div><div><strong>Security hardening</strong> — CSRF, CSP, rate limiting, XSS prevention, session fixation</div></li>
+      <li><div class="ck yes">✓</div><div><strong>Admin panel</strong> — User management, plan upgrades, audit log, revenue metrics</div></li>
+      <li><div class="ck yes">✓</div><div><strong>Waitlist system</strong> — Signup, CSV export, landing page</div></li>
+    </ul>
+
+    <h3>Phase 2 Objectives (In Scope — This SOW)</h3>
+    <ul class="checklist">
+      <li><div class="ck no">○</div><div><strong>API key encryption at rest</strong> — AES-256 encrypt Binance/API secrets in DB</div></li>
+      <li><div class="ck no">○</div><div><strong>Redis session store</strong> — Replace file-based sessions for horizontal scaling</div></li>
+      <li><div class="ck no">○</div><div><strong>User onboarding flow</strong> — Guided tour, free-to-pro upsell modal, tutorial steps</div></li>
+      <li><div class="ck no">○</div><div><strong>Admin UI dashboard</strong> — Browser-based admin panel replacing CLI management</div></li>
+      <li><div class="ck no">○</div><div><strong>Unit & integration tests</strong> — 70%+ coverage on critical paths</div></li>
+      <li><div class="ck no">○</div><div><strong>Error monitoring</strong> — Sentry integration for production error tracking</div></li>
+      <li><div class="ck no">○</div><div><strong>Per-user rate limiting</strong> — Supplement IP-based limits with authenticated user limits</div></li>
+      <li><div class="ck no">○</div><div><strong>Password reset token hashing</strong> — Hash tokens before DB storage</div></li>
+      <li><div class="ck no">○</div><div><strong>Pagination on admin endpoints</strong> — Prevent OOM on large deployments</div></li>
+      <li><div class="ck no">○</div><div><strong>Microservice auth</strong> — JWT signing between Node ↔ Python services</div></li>
+      <li><div class="ck no">○</div><div><strong>Real on-chain data</strong> — Replace synthetic whale/flow data with Glassnode/Alchemy API</div></li>
+      <li><div class="ck partial">~</div><div><strong>Strategy builder UI</strong> — Template-to-code generator (partially in autoTrade.js)</div></li>
+    </ul>
+  </section>
+
+  <!-- DELIVERABLES -->
+  <section id="deliverables">
+    <h2 class="sec-title"><span class="icon">📦</span> Deliverables</h2>
+    <div class="sec-divider"></div>
+    <table>
+      <thead><tr><th>ID</th><th>Deliverable</th><th>Format</th><th>Phase</th><th>Status</th></tr></thead>
+      <tbody>
+        <tr><td>D-01</td><td>Production-ready web application (Node.js + Express)</td><td>Source code + deployment config</td><td>1</td><td><span class="status done">✓ Done</span></td></tr>
+        <tr><td>D-02</td><td>Authentication system (bcrypt + TOTP + session mgmt)</td><td>Source code</td><td>1</td><td><span class="status done">✓ Done</span></td></tr>
+        <tr><td>D-03</td><td>ML price prediction microservice (Python/Flask)</td><td>Python service + requirements.txt</td><td>1</td><td><span class="status done">✓ Done</span></td></tr>
+        <tr><td>D-04</td><td>Backtesting microservice (Python/backtesting.py)</td><td>Python service + strategies/</td><td>1</td><td><span class="status done">✓ Done</span></td></tr>
+        <tr><td>D-05</td><td>Database schema (app.db + market.db)</td><td>SQLite + migration scripts</td><td>1</td><td><span class="status done">✓ Done</span></td></tr>
+        <tr><td>D-06</td><td>Security hardening (CSRF, CSP, XSS, rate limiting)</td><td>Middleware + config</td><td>1</td><td><span class="status done">✓ Done</span></td></tr>
+        <tr><td>D-07</td><td>Landing page + waitlist system</td><td>HTML/CSS/JS</td><td>1</td><td><span class="status done">✓ Done</span></td></tr>
+        <tr><td>D-08</td><td>This SOW + Technical Analysis document</td><td>HTML document</td><td>1</td><td><span class="status done">✓ Done</span></td></tr>
+        <tr><td>D-09</td><td>API key encryption module</td><td>Source code</td><td>2</td><td><span class="status todo">Planned</span></td></tr>
+        <tr><td>D-10</td><td>Redis session store migration</td><td>Source code + Redis config</td><td>2</td><td><span class="status todo">Planned</span></td></tr>
+        <tr><td>D-11</td><td>Onboarding flow + upsell system</td><td>Source code</td><td>2</td><td><span class="status todo">Planned</span></td></tr>
+        <tr><td>D-12</td><td>Test suite (Jest + Supertest)</td><td>test/ directory, CI config</td><td>2</td><td><span class="status todo">Planned</span></td></tr>
+        <tr><td>D-13</td><td>Admin UI dashboard</td><td>HTML/JS admin panel</td><td>2</td><td><span class="status todo">Planned</span></td></tr>
+        <tr><td>D-14</td><td>Sentry error monitoring integration</td><td>Source code + Sentry project</td><td>2</td><td><span class="status todo">Planned</span></td></tr>
+      </tbody>
+    </table>
+  </section>
+
+  <!-- ARCHITECTURE -->
+  <section id="architecture">
+    <h2 class="sec-title"><span class="icon">🏗</span> System Architecture</h2>
+    <div class="sec-divider"></div>
+
+    <h3>Architecture Overview</h3>
+    <p>TraderPro is a monolithic Node.js/Express application with two satellite Python microservices. The frontend is a multi-module vanilla JavaScript SPA served as static files. A background cron loop handles server-side alert evaluation every 60 seconds.</p>
+
+    <div style="margin-bottom:1.5rem">
+      <div class="arch-box" style="border-color:var(--accent)30;margin-bottom:.5rem">
+        <div style="font-size:.72rem;color:var(--muted);text-transform:uppercase;margin-bottom:.5rem">Client Layer</div>
+        <div style="display:flex;justify-content:center;gap:.75rem;flex-wrap:wrap;font-size:.78rem">
+          <span class="tag blue">SignalBus</span><span class="tag blue">CommandCenter</span><span class="tag blue">LLMTradeEngine</span>
+          <span class="tag blue">AlertEngine</span><span class="tag blue">Portfolio</span><span class="tag blue">TradeJournal</span>
+          <span class="tag blue">AutoTrade</span><span class="tag blue">Settings</span>
+        </div>
+      </div>
+      <div class="arch-arrow">↕ Fetch API (CSRF token in X-CSRF-Token header)</div>
+      <div class="arch-box" style="border-color:var(--cyan)30;margin-bottom:.5rem">
+        <div style="font-size:.72rem;color:var(--muted);text-transform:uppercase;margin-bottom:.5rem">Express Server (server.js) — 108 endpoints</div>
+        <div style="display:flex;justify-content:center;gap:.75rem;flex-wrap:wrap;font-size:.78rem">
+          <span class="tag cyan">Helmet CSP</span><span class="tag cyan">Rate Limiting</span><span class="tag cyan">Session + CSRF</span>
+          <span class="tag cyan">requireAuth</span><span class="tag cyan">requireAdmin</span><span class="tag cyan">Alert Cron</span>
+        </div>
+      </div>
+      <div class="arch-arrow">↓ better-sqlite3 &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;↓ axios/fetch &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;↓ HTTP</div>
+      <div class="arch-grid">
+        <div class="arch-box" style="border-color:var(--green)30">
+          <div style="font-size:.72rem;color:var(--muted);margin-bottom:.3rem">app.db</div>
+          <div style="font-size:.78rem">users · auth · alerts · journal · portfolio · keys · audit</div>
+        </div>
+        <div class="arch-box" style="border-color:var(--green)30">
+          <div style="font-size:.72rem;color:var(--muted);margin-bottom:.3rem">market.db</div>
+          <div style="font-size:.78rem">prices · signals · news · klines · onchain · backtest</div>
+        </div>
+        <div class="arch-box" style="border-color:var(--amber)30">
+          <div style="font-size:.72rem;color:var(--muted);margin-bottom:.3rem">External APIs (13)</div>
+          <div style="font-size:.78rem">Binance · CoinGecko · FRED · Polymarket · PSX · Slack</div>
+        </div>
+      </div>
+      <div class="arch-arrow">↕ localhost:5001 / :5002</div>
+      <div class="arch-grid" style="grid-template-columns:1fr 1fr">
+        <div class="arch-box" style="border-color:var(--accent)30">
+          <div style="font-size:.72rem;color:var(--muted);margin-bottom:.3rem">ML Service (port 5001)</div>
+          <div style="font-size:.78rem">Flask · scikit-learn · Ensemble prediction (RF + GB + LinReg)</div>
+        </div>
+        <div class="arch-box" style="border-color:var(--accent)30">
+          <div style="font-size:.72rem;color:var(--muted);margin-bottom:.3rem">AutoTrade Service (port 5002)</div>
+          <div style="font-size:.78rem">Flask · backtesting.py · Strategy execution · Sharpe/Calmar scoring</div>
+        </div>
+      </div>
+    </div>
+
+    <h3>Data Flow</h3>
+    <p>All authenticated client requests include a <code>X-CSRF-Token</code> header via <code>AuthUtils.apiFetch()</code>. The CSRF middleware validates this against the session-bound token for all non-GET, non-exempt routes. API responses are cached in an in-memory TTL store to reduce external API calls and respect free-tier rate limits.</p>
+  </section>
+
+  <!-- TECH STACK -->
+  <section id="stack">
+    <h2 class="sec-title"><span class="icon">⚙️</span> Technology Stack</h2>
+    <div class="sec-divider"></div>
+    <table>
+      <thead><tr><th>Component</th><th>Technology</th><th>Version</th><th>Purpose</th></tr></thead>
+      <tbody>
+        <tr><td colspan="4" style="color:var(--accent);font-weight:700;font-size:.75rem;text-transform:uppercase;background:#5b72ff08">Backend</td></tr>
+        <tr><td>HTTP Framework</td><td>Express.js</td><td>^4.18.2</td><td>Route handling, middleware pipeline</td></tr>
+        <tr><td>Runtime</td><td>Node.js</td><td>18+</td><td>Server runtime (AbortSignal.timeout requires ≥17)</td></tr>
+        <tr><td>Database (users)</td><td>better-sqlite3</td><td>^12.8.0</td><td>Synchronous SQLite — app.db</td></tr>
+        <tr><td>Database (market)</td><td>better-sqlite3</td><td>^12.8.0</td><td>Synchronous SQLite — market.db</td></tr>
+        <tr><td>Password hashing</td><td>bcryptjs</td><td>^3.0.3</td><td>12-round salted password hashing</td></tr>
+        <tr><td>2FA / TOTP</td><td>speakeasy</td><td>^2.0.0</td><td>RFC 6238 TOTP generation & verification</td></tr>
+        <tr><td>QR Code</td><td>qrcode</td><td>^1.5.4</td><td>2FA setup QR code generation</td></tr>
+        <tr><td>Email</td><td>nodemailer</td><td>^8.0.7</td><td>Password reset email delivery</td></tr>
+        <tr><td>Session</td><td>express-session + session-file-store</td><td>^1.19.0</td><td>Server-side session management</td></tr>
+        <tr><td>Security headers</td><td>helmet</td><td>^8.1.0</td><td>CSP, HSTS, X-Frame, X-Content-Type</td></tr>
+        <tr><td>Rate limiting</td><td>express-rate-limit</td><td>^8.3.2</td><td>IP-based request throttling</td></tr>
+        <tr><td>Compression</td><td>compression</td><td>^1.8.1</td><td>gzip response compression</td></tr>
+        <tr><td>HTTP client</td><td>axios</td><td>^1.6.2</td><td>External API calls with timeout</td></tr>
+        <tr><td>RSS parsing</td><td>rss-parser</td><td>^3.13.0</td><td>News feed aggregation</td></tr>
+        <tr><td>Environment</td><td>dotenv</td><td>^17.4.1</td><td>Environment variable management</td></tr>
+        <tr><td colspan="4" style="color:var(--cyan);font-weight:700;font-size:.75rem;text-transform:uppercase;background:#00d4ff08">Python Microservices</td></tr>
+        <tr><td>ML Service</td><td>Flask + scikit-learn</td><td>latest</td><td>Ensemble price prediction</td></tr>
+        <tr><td>Backtest Service</td><td>Flask + backtesting.py</td><td>latest</td><td>Strategy simulation</td></tr>
+        <tr><td>Data manipulation</td><td>pandas + numpy</td><td>latest</td><td>Feature engineering</td></tr>
+        <tr><td colspan="4" style="color:var(--green);font-weight:700;font-size:.75rem;text-transform:uppercase;background:#00e87a08">Frontend</td></tr>
+        <tr><td>Language</td><td>Vanilla JavaScript (ES2020+)</td><td>—</td><td>No framework dependency, 56 modules</td></tr>
+        <tr><td>Charts</td><td>Canvas API</td><td>—</td><td>Donut charts, heatmaps, correlation matrix</td></tr>
+        <tr><td>Storage</td><td>localStorage + sessionStorage</td><td>—</td><td>Client-side state persistence</td></tr>
+        <tr><td>Notifications</td><td>Web Notifications API</td><td>—</td><td>Browser push alerts</td></tr>
+      </tbody>
+    </table>
+  </section>
+
+  <!-- FEATURE INVENTORY -->
+  <section id="features">
+    <h2 class="sec-title"><span class="icon">📋</span> Feature Inventory</h2>
+    <div class="sec-divider"></div>
+    <table>
+      <thead><tr><th>Module</th><th>File</th><th>Status</th><th>Description</th></tr></thead>
+      <tbody>
+        <tr><td><strong>Command Center</strong></td><td>commandCenter.js</td><td><span class="status done">✓ Done</span></td><td>Unified dashboard: Signal Radar, Market Tape, detail panel with live WebSocket prices</td></tr>
+        <tr><td><strong>LLM Trade Engine</strong></td><td>llmTradeEngine.js</td><td><span class="status done">✓ Done</span></td><td>AI Agent Council — 3 specialist agents + Chief Analyst synthesis via Mistral-7B (OpenRouter)</td></tr>
+        <tr><td><strong>Alert Engine</strong></td><td>alertEngine.js</td><td><span class="status done">✓ Done</span></td><td>Price/RSI conditional alerts, browser notifications, server-side Slack relay, 60s cron</td></tr>
+        <tr><td><strong>Portfolio Tracker</strong></td><td>portfolioTracker.js</td><td><span class="status done">✓ Done</span></td><td>Holdings with live prices, cost basis, P&L, allocation donut, Binance sync</td></tr>
+        <tr><td><strong>Trade Journal</strong></td><td>tradeJournal.js</td><td><span class="status done">✓ Done</span></td><td>Trade log with entry/exit, R:R, P&L, notes, filter, CSV export, server sync</td></tr>
+        <tr><td><strong>AutoTrade / Backtester</strong></td><td>autoTrade.js + Python</td><td><span class="status done">✓ Done</span></td><td>Strategy backtesting, Sharpe/Calmar eval, experiment log, strategy code viewer</td></tr>
+        <tr><td><strong>ML Price Prediction</strong></td><td>mlPredict.js + Python</td><td><span class="status done">✓ Done</span></td><td>Ensemble prediction (1h/24h/7d horizon) with confidence score</td></tr>
+        <tr><td><strong>On-Chain Analytics</strong></td><td>onChainAnalytics.js</td><td><span class="status progress">~ Synthetic</span></td><td>Whale alerts, exchange flow, liquidation heatmaps — synthetic data (Phase 2: real API)</td></tr>
+        <tr><td><strong>Macro Sentiment</strong></td><td>macroSentiment.js</td><td><span class="status done">✓ Done</span></td><td>Fear & Greed Index, FRED macro (6 series), economic calendar</td></tr>
+        <tr><td><strong>Arbitrage Scanner</strong></td><td>arbitrageScanner.js</td><td><span class="status done">✓ Done</span></td><td>Cross-exchange spread detection: Binance, Bybit, Kraken, Coinbase, OKX</td></tr>
+        <tr><td><strong>Polymarket</strong></td><td>polymarketIntegration.js</td><td><span class="status progress">~ Read only</span></td><td>Prediction market odds and CLOB trades — no order placement (Phase 3)</td></tr>
+        <tr><td><strong>PSX Markets</strong></td><td>globalMarketsService.js</td><td><span class="status done">✓ Done</span></td><td>KSE-100/30/KMI-30 indices, 18 major Pakistani stocks, sectors</td></tr>
+        <tr><td><strong>Global Markets</strong></td><td>globalMarkets.js</td><td><span class="status done">✓ Done</span></td><td>S&P 500, NASDAQ, FTSE, DJI, Russell 2000, VIX</td></tr>
+        <tr><td><strong>Kelly Position Sizer</strong></td><td>kellyPositionSizer.js</td><td><span class="status done">✓ Done</span></td><td>Optimal position sizing from journal history using Kelly Criterion</td></tr>
+        <tr><td><strong>Paper Trading</strong></td><td>paperTradingV2.js</td><td><span class="status done">✓ Done</span></td><td>Simulated $10k virtual account, no real orders</td></tr>
+        <tr><td><strong>DCA Calculator</strong></td><td>dcaCalculator.js</td><td><span class="status done">✓ Done</span></td><td>Dollar-cost averaging projections with compound returns</td></tr>
+        <tr><td><strong>Correlation Matrix</strong></td><td>correlation.js</td><td><span class="status done">✓ Done</span></td><td>Asset price correlation heatmap</td></tr>
+        <tr><td><strong>Settings</strong></td><td>settings.js</td><td><span class="status done">✓ Done</span></td><td>API keys, 2FA management, Binance test, data sync, plan info</td></tr>
+        <tr><td><strong>Auth (full)</strong></td><td>auth.js + authService.js</td><td><span class="status done">✓ Done</span></td><td>Register, login, forgot/reset password, TOTP 2FA setup/verify/disable</td></tr>
+        <tr><td><strong>Academy + Glossary</strong></td><td>academy.js, glossary.js</td><td><span class="status done">✓ Done</span></td><td>Trading education modules, indicator explanations</td></tr>
+        <tr><td><strong>Strategy Builder</strong></td><td>strategyBuilder.js</td><td><span class="status progress">~ Partial</span></td><td>Template definitions exist; UI generator not complete (Phase 2)</td></tr>
+      </tbody>
+    </table>
+  </section>
+
+  <!-- API CATALOGUE -->
+  <section id="api">
+    <h2 class="sec-title"><span class="icon">🔌</span> API Catalogue</h2>
+    <div class="sec-divider"></div>
+    <table>
+      <thead><tr><th>Category</th><th>Count</th><th>Auth Required</th><th>Key Endpoints</th></tr></thead>
+      <tbody>
+        <tr><td><strong>Authentication</strong></td><td>10</td><td>Mixed</td><td>POST /api/auth/login · register · forgot-password · reset-password · 2fa/setup · 2fa/validate</td></tr>
+        <tr><td><strong>User Data</strong></td><td>14</td><td>Yes</td><td>GET/POST /api/user/alerts · journal · portfolio · keys · binance/balances</td></tr>
+        <tr><td><strong>Crypto Markets</strong></td><td>12</td><td>Yes</td><td>GET /api/crypto/:symbol/analysis · mtf · futures · predict · /api/crypto/top · search</td></tr>
+        <tr><td><strong>Forex</strong></td><td>4</td><td>Yes</td><td>GET /api/forex/pairs · pkr · rates · convert</td></tr>
+        <tr><td><strong>Database (historical)</strong></td><td>8</td><td>Yes</td><td>GET /api/db/prices/:symbol · signals/:symbol · news · arbitrage · onchain · portfolio/history</td></tr>
+        <tr><td><strong>Global Markets</strong></td><td>5</td><td>Yes</td><td>GET /api/markets/us/stocks · uk/stocks · indices · /api/psx/stocks · sectors · indices</td></tr>
+        <tr><td><strong>Proxy Routes</strong></td><td>9</td><td>Mixed</td><td>GET /api/proxy/binance/ticker · klines · fred · polymarket/markets · exchanges/:symbol</td></tr>
+        <tr><td><strong>AutoTrade</strong></td><td>8</td><td>Yes</td><td>POST /api/autotrade/backtest · results · strategy/create · GET strategy/:file · results</td></tr>
+        <tr><td><strong>Admin</strong></td><td>10</td><td>Admin only</td><td>GET /api/admin/users · audit · revenue · waitlist/export.csv · POST upgrade · suspend</td></tr>
+        <tr><td><strong>Miscellaneous</strong></td><td>5</td><td>Mixed</td><td>POST /api/waitlist · GET /health · DELETE /api/cache · GET /api/auth/csrf</td></tr>
+        <tr style="background:#5b72ff08"><td><strong>TOTAL</strong></td><td><strong>108</strong></td><td>—</td><td>78 GET · 23 POST · 5 DELETE · 2 PUT</td></tr>
+      </tbody>
+    </table>
+  </section>
+
+  <!-- DATABASE -->
+  <section id="database">
+    <h2 class="sec-title"><span class="icon">🗄</span> Database Schema</h2>
+    <div class="sec-divider"></div>
+
+    <h3>app.db — User & Business Data</h3>
+    <table>
+      <thead><tr><th>Table</th><th>Columns</th><th>Purpose</th></tr></thead>
+      <tbody>
+        <tr><td>users</td><td>id, username, email, password_hash, role, plan, plan_expires_at, suspended, created_at</td><td>User accounts with plan-based access control</td></tr>
+        <tr><td>admin_audit_log</td><td>id, action, target_user_id, admin_id, details, created_at</td><td>Admin action audit trail</td></tr>
+        <tr><td>waitlist</td><td>id, email, source, signed_up_at</td><td>Pre-launch email capture</td></tr>
+        <tr><td>settings</td><td>key, value, updated_at</td><td>Global app configuration (key-value)</td></tr>
+        <tr><td>user_api_keys</td><td>user_id, key_name, key_value, created_at, updated_at</td><td>Per-user encrypted API credentials</td></tr>
+        <tr><td>user_alerts</td><td>id, user_id, type, symbol, condition, value, label, active, created_at, fired_at</td><td>Price/RSI alert rules</td></tr>
+        <tr><td>user_journal</td><td>id, user_id, data_json, updated_at</td><td>Trade journal entries (JSON blob)</td></tr>
+        <tr><td>user_portfolio</td><td>id, user_id, data_json, updated_at</td><td>Portfolio holdings (JSON blob)</td></tr>
+        <tr><td>password_reset_tokens</td><td>token, user_id, expires_at, used, created_at</td><td>Time-limited password reset tokens</td></tr>
+        <tr><td>users (migration cols)</td><td>totp_secret TEXT, totp_enabled INTEGER</td><td>2FA TOTP configuration</td></tr>
+      </tbody>
+    </table>
+
+    <h3>market.db — Market Data</h3>
+    <table>
+      <thead><tr><th>Table</th><th>Purpose</th></tr></thead>
+      <tbody>
+        <tr><td>price_history</td><td>OHLCV price records per symbol + timestamp</td></tr>
+        <tr><td>klines</td><td>Candlestick data (open, high, low, close, volume, interval)</td></tr>
+        <tr><td>trade_signals</td><td>Generated trading signals with source, confidence, direction</td></tr>
+        <tr><td>news</td><td>Aggregated RSS news with title, source, URL, published_at</td></tr>
+        <tr><td>arbitrage_opportunities</td><td>Cross-exchange spread detections</td></tr>
+        <tr><td>onchain_metrics</td><td>Whale flow, exchange inflow/outflow, open interest snapshots</td></tr>
+        <tr><td>portfolio_snapshots</td><td>Time-series portfolio value for chart history</td></tr>
+        <tr><td>order_book_snapshots</td><td>Bid/ask depth snapshots</td></tr>
+        <tr><td>backtest_results</td><td>Strategy backtest outcomes with Sharpe, Calmar, win rate</td></tr>
+      </tbody>
+    </table>
+  </section>
+
+  <!-- SECURITY POSTURE -->
+  <section id="security">
+    <h2 class="sec-title"><span class="icon">🔐</span> Security Posture</h2>
+    <div class="sec-divider"></div>
+
+    <h3>Implemented Controls</h3>
+    <ul class="checklist">
+      <li><div class="ck yes">✓</div><div><strong>bcrypt password hashing</strong> — 12 salt rounds, constant-time comparison (bcryptjs)</div></li>
+      <li><div class="ck yes">✓</div><div><strong>CSRF protection</strong> — Double-submit pattern: X-CSRF-Token header validated against session.csrfToken for all non-GET mutations</div></li>
+      <li><div class="ck yes">✓</div><div><strong>Session fixation prevention</strong> — session.regenerate() called on login (both full and 2FA-pending paths)</div></li>
+      <li><div class="ck yes">✓</div><div><strong>TOTP 2FA</strong> — speakeasy RFC 6238, ±1 window tolerance, QR code provisioning, disable requires password</div></li>
+      <li><div class="ck yes">✓</div><div><strong>Content Security Policy</strong> — Helmet CSP with allowlisted CDN origins, no unsafe-eval, frame-ancestors: none</div></li>
+      <li><div class="ck yes">✓</div><div><strong>XSS prevention</strong> — esc() helper applied to all innerHTML in all 6 client modules; safeMd() for LLM text rendering</div></li>
+      <li><div class="ck yes">✓</div><div><strong>SQL injection prevention</strong> — Parameterized queries throughout (better-sqlite3 .prepare().run())</div></li>
+      <li><div class="ck yes">✓</div><div><strong>Rate limiting</strong> — Auth: 15/15min; General API: 200/15min; Slack proxy: 10/10min; Admin mutations: 30/1min</div></li>
+      <li><div class="ck yes">✓</div><div><strong>SSRF prevention</strong> — Slack webhook URL validated with new URL() + exact hostname check (hooks.slack.com only)</div></li>
+      <li><div class="ck yes">✓</div><div><strong>Input validation</strong> — validSymbol() regex guard on all symbol params; safeInt() on all numeric query params</div></li>
+      <li><div class="ck yes">✓</div><div><strong>Email enumeration prevention</strong> — /api/auth/forgot-password always returns 200 regardless of email existence</div></li>
+      <li><div class="ck yes">✓</div><div><strong>API key masking</strong> — /api/user/keys returns only suffix + _set flag, never raw values</div></li>
+      <li><div class="ck yes">✓</div><div><strong>Production error suppression</strong> — Generic errors in IS_PROD=true; detailed errors in dev only</div></li>
+      <li><div class="ck yes">✓</div><div><strong>Startup guards</strong> — Server refuses to start without SESSION_SECRET; refuses in production without ALLOWED_ORIGINS</div></li>
+      <li><div class="ck yes">✓</div><div><strong>Admin route protection</strong> — requireAdmin middleware validates role + non-suspended status on every request</div></li>
+      <li><div class="ck yes">✓</div><div><strong>Admin ID validation</strong> — parseAdminUserId() rejects NaN, zero, negative IDs with 400 error</div></li>
+      <li><div class="ck yes">✓</div><div><strong>Alert cron timeout</strong> — AbortSignal.timeout(8000) on Binance fetch in alert cron</div></li>
+      <li><div class="ck yes">✓</div><div><strong>CSV formula injection</strong> — Admin waitlist export strips leading =+@- characters (Excel formula injection prevention)</div></li>
+
+      <li><div class="ck partial">~</div><div><strong>API key storage</strong> — Stored in DB, masked on retrieval; <em>not yet encrypted at rest</em> (Phase 2)</div></li>
+      <li><div class="ck partial">~</div><div><strong>Password reset tokens</strong> — Stored as plain hex in DB; <em>not yet hashed before storage</em> (Phase 2)</div></li>
+      <li><div class="ck partial">~</div><div><strong>Per-user rate limiting</strong> — IP-based only; <em>no per-authenticated-user limits</em> (Phase 2)</div></li>
+      <li><div class="ck no">○</div><div><strong>Microservice auth</strong> — Node↔Python communication unprotected (localhost assumption) — Phase 2</div></li>
+      <li><div class="ck no">○</div><div><strong>DB encryption</strong> — SQLite files unencrypted at rest — Phase 3 (SQLCipher)</div></li>
+    </ul>
+  </section>
+
+  <!-- AUDIT RESULTS -->
+  <section id="audit">
+    <h2 class="sec-title"><span class="icon">🔍</span> Security Audit Results</h2>
+    <div class="sec-divider"></div>
+    <p>Three full security audits were conducted across the development lifecycle. The following is the final resolved state as of May 2026.</p>
+
+    <h3>All Findings — Resolved & Open</h3>
+    <table>
+      <thead><tr><th>ID</th><th>Severity</th><th>Category</th><th>File(s)</th><th>Finding</th><th>Status</th></tr></thead>
+      <tbody>
+        <tr><td>S-01</td><td><span class="sev critical">Critical</span></td><td>XSS</td><td>llmTradeEngine.js</td><td>LLM summary from API injected raw into innerHTML — no HTML escaping before markdown conversion</td><td><span class="status done">✓ Fixed</span></td></tr>
+        <tr><td>S-02</td><td><span class="sev critical">Critical</span></td><td>XSS</td><td>llmTradeEngine.js</td><td>Agent council data (factor, detail, symbol, source) in innerHTML without esc()</td><td><span class="status done">✓ Fixed</span></td></tr>
+        <tr><td>S-03</td><td><span class="sev high">High</span></td><td>CSRF</td><td>autoTrade.js</td><td>POST to /api/autotrade/backtest, /results, /strategy/create using plain fetch() — no CSRF token</td><td><span class="status done">✓ Fixed</span></td></tr>
+        <tr><td>S-04</td><td><span class="sev high">High</span></td><td>SSRF</td><td>server.js</td><td>Slack proxy validated with startsWith() — bypassable with crafted path. Full URL parsing required.</td><td><span class="status done">✓ Fixed</span></td></tr>
+        <tr><td>S-05</td><td><span class="sev high">High</span></td><td>InputValidation</td><td>server.js</td><td>parseInt(req.query.limit) returns NaN for non-numeric strings; NaN injected into DB queries and API URLs</td><td><span class="status done">✓ Fixed</span></td></tr>
+        <tr><td>S-06</td><td><span class="sev high">High</span></td><td>InputValidation</td><td>server.js</td><td>parseInt(req.params.id) in admin routes accepts NaN, zero, negative values</td><td><span class="status done">✓ Fixed</span></td></tr>
+        <tr><td>S-07</td><td><span class="sev high">High</span></td><td>RateLimit</td><td>server.js</td><td>Admin mutation endpoints (upgrade, suspend) had no dedicated rate limiter</td><td><span class="status done">✓ Fixed</span></td></tr>
+        <tr><td>S-08</td><td><span class="sev medium">Medium</span></td><td>XSS</td><td>alertEngine.js</td><td>Alert label, type, symbol, id in innerHTML without esc()</td><td><span class="status done">✓ Fixed</span></td></tr>
+        <tr><td>S-09</td><td><span class="sev medium">Medium</span></td><td>XSS</td><td>commandCenter.js, tradeJournal.js</td><td>Symbol, confidence, source data in innerHTML without esc()</td><td><span class="status done">✓ Fixed</span></td></tr>
+        <tr><td>S-10</td><td><span class="sev medium">Medium</span></td><td>CSRF</td><td>alertEngine.js, tradeJournal.js, portfolioTracker.js, settings.js</td><td>POST/DELETE mutations using plain fetch() instead of AuthUtils.apiFetch()</td><td><span class="status done">✓ Fixed</span></td></tr>
+        <tr><td>S-11</td><td><span class="sev medium">Medium</span></td><td>Config</td><td>server.js</td><td>contentSecurityPolicy: false — no CSP header at all</td><td><span class="status done">✓ Fixed</span></td></tr>
+        <tr><td>S-12</td><td><span class="sev medium">Medium</span></td><td>AuthN</td><td>server.js</td><td>Session not regenerated before 2FA pending state — session fixation risk on 2FA path</td><td><span class="status done">✓ Fixed</span></td></tr>
+        <tr><td>S-13</td><td><span class="sev medium">Medium</span></td><td>ErrorHandling</td><td>server.js</td><td>Alert cron catch{} silently swallowed errors — no logging</td><td><span class="status done">✓ Fixed</span></td></tr>
+        <tr><td>S-14</td><td><span class="sev medium">Medium</span></td><td>InputValidation</td><td>server.js</td><td>req.query.tag injected directly into Polymarket API URL without validation</td><td><span class="status done">✓ Fixed</span></td></tr>
+        <tr><td>S-15</td><td><span class="sev medium">Medium</span></td><td>InputValidation</td><td>tradeJournal.js</td><td>CSV export: notes field not RFC 4180 escaped — breaks on internal quotes and newlines</td><td><span class="status done">✓ Fixed</span></td></tr>
+        <tr><td>S-16</td><td><span class="sev medium">Medium</span></td><td>InputValidation</td><td>server.js</td><td>Admin waitlist CSV: email/source fields not formula-injection sanitised</td><td><span class="status done">✓ Fixed</span></td></tr>
+        <tr><td>S-17</td><td><span class="sev low">Low</span></td><td>InputValidation</td><td>server.js</td><td>parseInt() for hours/days query params — 5 endpoints still using raw parseInt</td><td><span class="status done">✓ Fixed</span></td></tr>
+        <tr><td>S-18</td><td><span class="sev low">Low</span></td><td>InputValidation</td><td>server.js</td><td>Cache-clear endpoint passing raw req.query.host to invalidateHost() without validation</td><td><span class="status done">✓ Fixed</span></td></tr>
+        <tr><td>S-19</td><td><span class="sev medium">Medium</span></td><td>Crypto</td><td>services/appDb.js</td><td>User API keys (Binance secret) stored plaintext in SQLite</td><td><span class="status todo">Phase 2</span></td></tr>
+        <tr><td>S-20</td><td><span class="sev medium">Medium</span></td><td>Crypto</td><td>services/authService.js</td><td>Password reset tokens stored as plaintext hex — readable on DB exfiltration</td><td><span class="status todo">Phase 2</span></td></tr>
+        <tr><td>S-21</td><td><span class="sev medium">Medium</span></td><td>RateLimit</td><td>server.js</td><td>No per-user rate limiting — only IP-based (shared IP users unfairly throttled)</td><td><span class="status todo">Phase 2</span></td></tr>
+        <tr><td>S-22</td><td><span class="sev low">Low</span></td><td>AuthN</td><td>server.js</td><td>Microservice comm (Node↔Python:5001/5002) has no authentication — localhost assumption only</td><td><span class="status todo">Phase 2</span></td></tr>
+      </tbody>
+    </table>
+
+    <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:1rem;margin-top:1.5rem">
+      <div class="card" style="text-align:center">
+        <div style="font-size:2rem;font-weight:900;color:var(--green)">18</div>
+        <div style="font-size:.75rem;color:var(--muted)">Issues Fixed</div>
+      </div>
+      <div class="card" style="text-align:center">
+        <div style="font-size:2rem;font-weight:900;color:var(--amber)">4</div>
+        <div style="font-size:.75rem;color:var(--muted)">Phase 2 (Planned)</div>
+      </div>
+      <div class="card" style="text-align:center">
+        <div style="font-size:2rem;font-weight:900;color:var(--red)">0</div>
+        <div style="font-size:.75rem;color:var(--muted)">Open Critical</div>
+      </div>
+      <div class="card" style="text-align:center">
+        <div style="font-size:2rem;font-weight:900;color:var(--accent)">82%</div>
+        <div style="font-size:.75rem;color:var(--muted)">Remediation Rate</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- REMEDIATION LOG -->
+  <section id="remediation">
+    <h2 class="sec-title"><span class="icon">🛠</span> Remediation Log</h2>
+    <div class="sec-divider"></div>
+
+    <div class="card card-green" style="margin-bottom:1rem">
+      <h3 style="margin-top:0">Session Fixation Fix (S-12)</h3>
+      <p>Added <code>req.session.regenerate()</code> on both the full login path and the 2FA pending path. The session ID is cryptographically replaced after successful password verification, preventing fixation attacks where an attacker pre-plants a session ID.</p>
+      <pre><code>// Before 2FA pending state
+await new Promise((resolve, reject) =>
+  req.session.regenerate(err => err ? reject(err) : resolve()));
+req.session.pendingTotpUserId = result.user.id;</code></pre>
+    </div>
+
+    <div class="card card-green" style="margin-bottom:1rem">
+      <h3 style="margin-top:0">SSRF Fix — Slack Proxy (S-04)</h3>
+      <p>Replaced <code>startsWith('https://hooks.slack.com/')</code> with full URL parsing. The parsed hostname is checked exactly against <code>'hooks.slack.com'</code>, preventing path-based bypass and protocol confusion attacks.</p>
+      <pre><code>let parsedUrl;
+try { parsedUrl = new URL(webhook); } catch { /* invalid */ }
+if (!parsedUrl || parsedUrl.protocol !== 'https:'
+    || parsedUrl.hostname !== 'hooks.slack.com') {
+  return res.status(400).json({ error: 'Invalid webhook URL' });
+}</code></pre>
+    </div>
+
+    <div class="card card-green" style="margin-bottom:1rem">
+      <h3 style="margin-top:0">XSS Fix — LLM Engine (S-01, S-02)</h3>
+      <p>Introduced <code>safeMd()</code> which escapes HTML <em>before</em> applying markdown transforms, ensuring injected <code>&lt;script&gt;</code> tags in LLM API responses cannot execute. Applied <code>esc()</code> to all agent data fields rendered via innerHTML.</p>
+      <pre><code>function safeMd(s) {
+  return esc(s)  // escape FIRST
+    .replace(/\*\*(.*?)\*\*/g, '&lt;strong&gt;$1&lt;/strong&gt;')
+    .replace(/\n\n/g, '&lt;/p&gt;&lt;p&gt;')
+    .replace(/\n/g, '&lt;br/&gt;');
+}</code></pre>
+    </div>
+
+    <div class="card card-green">
+      <h3 style="margin-top:0">safeInt() Helper — NaN Prevention (S-05, S-17)</h3>
+      <p>Added a global helper that guards all integer query parameter parsing. Returns the fallback value if parsing yields NaN, and optionally caps at a maximum to prevent resource exhaustion via large limit values.</p>
+      <pre><code>function safeInt(val, fallback, max) {
+  const n = parseInt(val, 10);
+  const result = Number.isFinite(n) ? n : fallback;
+  return max !== undefined ? Math.min(result, max) : result;
+}</code></pre>
+    </div>
+  </section>
+
+  <!-- PHASES -->
+  <section id="phases">
+    <h2 class="sec-title"><span class="icon">📅</span> Phase Plan</h2>
+    <div class="sec-divider"></div>
+
+    <h3>Phase 1 — Foundation (Complete)</h3>
+    <div class="card card-green" style="margin-bottom:1.5rem">
+      <p>All core features built and security-hardened. Platform is production-deployable with full authentication, 40+ trading features, 108 API endpoints, 2 microservices, and comprehensive security controls.</p>
+      <div style="margin-top:.75rem">
+        <div class="progress-bar"><div class="progress-fill" style="width:100%;background:var(--green)"></div></div>
+        <div style="font-size:.75rem;color:var(--muted)">100% Complete</div>
+      </div>
+    </div>
+
+    <h3>Phase 2 — Hardening & Growth (This SOW)</h3>
+    <div class="card card-amber" style="margin-bottom:1.5rem">
+      <p>Security hardening of remaining gaps, horizontal scaling preparation, onboarding flow, admin UI, and test coverage. Estimated 3 months.</p>
+      <div style="margin-top:.75rem">
+        <div class="progress-bar"><div class="progress-fill" style="width:5%;background:var(--amber)"></div></div>
+        <div style="font-size:.75rem;color:var(--muted)">5% Complete — starting now</div>
+      </div>
+
+      <table style="margin-top:1rem">
+        <thead><tr><th>Task</th><th>Effort</th><th>Priority</th></tr></thead>
+        <tbody>
+          <tr><td>API key encryption at rest (AES-256)</td><td>3 days</td><td><span class="sev high">High</span></td></tr>
+          <tr><td>Password reset token hashing (SHA-256)</td><td>1 day</td><td><span class="sev high">High</span></td></tr>
+          <tr><td>Per-user rate limiting (express-rate-limit + user ID key)</td><td>2 days</td><td><span class="sev high">High</span></td></tr>
+          <tr><td>JWT signing for microservice communication</td><td>2 days</td><td><span class="sev medium">Medium</span></td></tr>
+          <tr><td>Redis session store migration</td><td>3 days</td><td><span class="sev medium">Medium</span></td></tr>
+          <tr><td>User onboarding flow (tour + upsell)</td><td>5 days</td><td><span class="sev medium">Medium</span></td></tr>
+          <tr><td>Admin UI dashboard (browser-based)</td><td>7 days</td><td><span class="sev medium">Medium</span></td></tr>
+          <tr><td>Unit tests — Jest + Supertest (70%+ coverage)</td><td>10 days</td><td><span class="sev medium">Medium</span></td></tr>
+          <tr><td>Sentry error monitoring integration</td><td>1 day</td><td><span class="sev medium">Medium</span></td></tr>
+          <tr><td>Admin endpoint pagination (limit/offset)</td><td>1 day</td><td><span class="sev low">Low</span></td></tr>
+          <tr><td>Real on-chain data (Glassnode/Alchemy API)</td><td>5 days</td><td><span class="sev low">Low</span></td></tr>
+          <tr><td>Strategy Builder UI completion</td><td>5 days</td><td><span class="sev low">Low</span></td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <h3>Phase 3 — Scale & Enterprise (Future)</h3>
+    <div class="card card-cyan">
+      <p>Mobile app, white-label SaaS, institutional API, PostgreSQL migration, Polymarket order placement.</p>
+      <div style="margin-top:.75rem">
+        <div class="progress-bar"><div class="progress-fill" style="width:0%;background:var(--cyan)"></div></div>
+        <div style="font-size:.75rem;color:var(--muted)">Not started — post-funding</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- TIMELINE -->
+  <section id="timeline">
+    <h2 class="sec-title"><span class="icon">🗓</span> Timeline</h2>
+    <div class="sec-divider"></div>
+
+    <div class="milestone">
+      <div class="milestone-date"><div class="mo">Now</div><div class="yr">May '26</div></div>
+      <div class="milestone-items">
+        <div class="milestone-item"><span class="tag green">Done</span> Phase 1 complete — full feature set, security hardened</div>
+        <div class="milestone-item"><span class="tag green">Done</span> SOW + pitch deck + technical docs delivered</div>
+        <div class="milestone-item"><span class="tag blue">Start</span> API key encryption + token hashing (Week 1)</div>
+      </div>
+    </div>
+    <div class="milestone">
+      <div class="milestone-date"><div class="mo">Month</div><div class="yr">1 — Jun</div></div>
+      <div class="milestone-items">
+        <div class="milestone-item"><span class="tag amber">P2</span> Security hardening complete (encryption, rate limits, microservice JWT)</div>
+        <div class="milestone-item"><span class="tag amber">P2</span> Redis sessions deployed</div>
+        <div class="milestone-item"><span class="tag amber">P2</span> Sentry monitoring live</div>
+      </div>
+    </div>
+    <div class="milestone">
+      <div class="milestone-date"><div class="mo">Month</div><div class="yr">2 — Jul</div></div>
+      <div class="milestone-items">
+        <div class="milestone-item"><span class="tag amber">P2</span> Admin UI dashboard live</div>
+        <div class="milestone-item"><span class="tag amber">P2</span> User onboarding flow + upsell modal</div>
+        <div class="milestone-item"><span class="tag amber">P2</span> Real on-chain data (Glassnode API)</div>
+      </div>
+    </div>
+    <div class="milestone">
+      <div class="milestone-date"><div class="mo">Month</div><div class="yr">3 — Aug</div></div>
+      <div class="milestone-items">
+        <div class="milestone-item"><span class="tag amber">P2</span> Test suite ≥70% coverage — CI/CD pipeline</div>
+        <div class="milestone-item"><span class="tag amber">P2</span> Strategy Builder UI complete</div>
+        <div class="milestone-item"><span class="tag blue">Launch</span> Public beta launch — waitlist opens to Pro</div>
+      </div>
+    </div>
+    <div class="milestone">
+      <div class="milestone-date"><div class="mo">Month</div><div class="yr">6 — Nov</div></div>
+      <div class="milestone-items">
+        <div class="milestone-item"><span class="tag cyan">P3</span> Mobile app beta (React Native)</div>
+        <div class="milestone-item"><span class="tag cyan">P3</span> PostgreSQL migration (if >5k users)</div>
+        <div class="milestone-item"><span class="tag cyan">P3</span> White-label SaaS MVP</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- RESOURCES -->
+  <section id="resources">
+    <h2 class="sec-title"><span class="icon">👥</span> Resources & Cost</h2>
+    <div class="sec-divider"></div>
+
+    <h3>Phase 2 Team</h3>
+    <table>
+      <thead><tr><th>Role</th><th>FTE</th><th>Duration</th><th>Cost (est.)</th><th>Responsibilities</th></tr></thead>
+      <tbody>
+        <tr><td>Senior Full-Stack Engineer</td><td>1.0</td><td>3 months</td><td>$30,000</td><td>API key encryption, Redis migration, microservice JWT, test suite</td></tr>
+        <tr><td>Frontend Engineer</td><td>0.5</td><td>3 months</td><td>$12,000</td><td>Admin UI, onboarding flow, strategy builder UI</td></tr>
+        <tr><td>DevOps / Infrastructure</td><td>0.25</td><td>3 months</td><td>$6,000</td><td>CI/CD, Sentry, Redis, deployment hardening</td></tr>
+        <tr><td>QA Engineer</td><td>0.5</td><td>2 months</td><td>$8,000</td><td>Test suite, regression testing, security testing</td></tr>
+        <tr><td><strong>Total</strong></td><td><strong>2.25</strong></td><td><strong>3 months</strong></td><td><strong>$56,000</strong></td><td>Phase 2 complete</td></tr>
+      </tbody>
+    </table>
+
+    <h3>Infrastructure Costs (Monthly)</h3>
+    <table>
+      <thead><tr><th>Service</th><th>Current</th><th>Phase 2</th><th>Phase 3</th></tr></thead>
+      <tbody>
+        <tr><td>VPS / Cloud Host (Node.js)</td><td>$20/mo</td><td>$40/mo</td><td>$200/mo (HA)</td></tr>
+        <tr><td>Redis (sessions)</td><td>—</td><td>$15/mo</td><td>$30/mo</td></tr>
+        <tr><td>Python microservices</td><td>$10/mo</td><td>$20/mo</td><td>$100/mo</td></tr>
+        <tr><td>CoinGecko API (paid)</td><td>$0 (free)</td><td>$0</td><td>$129/mo</td></tr>
+        <tr><td>Glassnode (on-chain)</td><td>$0 (synthetic)</td><td>$29/mo</td><td>$29/mo</td></tr>
+        <tr><td>Sentry (error monitoring)</td><td>—</td><td>$26/mo</td><td>$26/mo</td></tr>
+        <tr><td>Email (SMTP)</td><td>$0 (dev)</td><td>$10/mo</td><td>$10/mo</td></tr>
+        <tr><td><strong>Total</strong></td><td><strong>$30/mo</strong></td><td><strong>$140/mo</strong></td><td><strong>$524/mo</strong></td></tr>
+      </tbody>
+    </table>
+  </section>
+
+  <!-- RISK REGISTER -->
+  <section id="risks">
+    <h2 class="sec-title"><span class="icon">⚠️</span> Risk Register</h2>
+    <div class="sec-divider"></div>
+    <table>
+      <thead><tr><th>ID</th><th>Risk</th><th>Likelihood</th><th>Impact</th><th>Mitigation</th><th>Owner</th></tr></thead>
+      <tbody>
+        <tr>
+          <td>R-01</td><td>SQLite bottleneck at scale (&gt;5k users)</td>
+          <td><span class="tag amber">Medium</span></td><td><span class="tag red">High</span></td>
+          <td>WAL mode enabled now; PostgreSQL migration path defined and modular; Redis sessions in Phase 2</td>
+          <td>Engineering</td>
+        </tr>
+        <tr>
+          <td>R-02</td><td>Free-tier API rate limits throttle live data</td>
+          <td><span class="tag amber">Medium</span></td>
+          <td><span class="tag amber">Medium</span></td>
+          <td>6-exchange fallback chain; TTL in-memory cache; synthetic data with clear labelling; upgrade path to paid APIs at scale</td>
+          <td>Engineering</td>
+        </tr>
+        <tr>
+          <td>R-03</td><td>LLM API key misuse / cost overrun</td>
+          <td><span class="tag green">Low</span></td>
+          <td><span class="tag amber">Medium</span></td>
+          <td>OpenRouter per-user key model; local rule engine fallback if key absent; plan-gate LLM access to Pro tier</td>
+          <td>Product</td>
+        </tr>
+        <tr>
+          <td>R-04</td><td>Regulatory classification as financial advisor</td>
+          <td><span class="tag green">Low</span></td>
+          <td><span class="tag red">High</span></td>
+          <td>Clear disclaimers (research tool, not advice); no order routing; no custody; legal review in Phase 2 budget</td>
+          <td>Legal</td>
+        </tr>
+        <tr>
+          <td>R-05</td><td>DB exfiltration exposes user API keys</td>
+          <td><span class="tag green">Low</span></td>
+          <td><span class="tag red">High</span></td>
+          <td>AES-256 encryption of keys at rest (Phase 2, Week 1); disclosure policy drafted</td>
+          <td>Engineering</td>
+        </tr>
+        <tr>
+          <td>R-06</td><td>Synthetic on-chain data misleads traders</td>
+          <td><span class="tag amber">Medium</span></td>
+          <td><span class="tag amber">Medium</span></td>
+          <td>Clear "SIMULATED DATA" badge in UI; real Glassnode integration in Phase 2; PSX synthetic flag already in API response</td>
+          <td>Product</td>
+        </tr>
+        <tr>
+          <td>R-07</td><td>Key developer unavailability</td>
+          <td><span class="tag green">Low</span></td>
+          <td><span class="tag red">High</span></td>
+          <td>Modular codebase; SOW + technical docs as onboarding; Phase 2 brings second senior engineer</td>
+          <td>Management</td>
+        </tr>
+        <tr>
+          <td>R-08</td><td>Crypto bear market → user churn</td>
+          <td><span class="tag amber">Medium</span></td>
+          <td><span class="tag amber">Medium</span></td>
+          <td>Free tier retains users; Academy content relevant in downturns; macro (FRED) features serve accumulation mindset</td>
+          <td>Product</td>
+        </tr>
+      </tbody>
+    </table>
+  </section>
+
+  <!-- ACCEPTANCE CRITERIA -->
+  <section id="acceptance">
+    <h2 class="sec-title"><span class="icon">✅</span> Acceptance Criteria</h2>
+    <div class="sec-divider"></div>
+
+    <h3>Phase 1 — Already Accepted</h3>
+    <ul class="checklist">
+      <li><div class="ck yes">✓</div><div>All 40+ features rendering and functional in production browser</div></li>
+      <li><div class="ck yes">✓</div><div>Authentication: registration, login, password reset, 2FA all functional end-to-end</div></li>
+      <li><div class="ck yes">✓</div><div>No open Critical or High severity security findings</div></li>
+      <li><div class="ck yes">✓</div><div>All 18 security findings from audits resolved and verified</div></li>
+      <li><div class="ck yes">✓</div><div>Server starts successfully with SESSION_SECRET env var set</div></li>
+      <li><div class="ck yes">✓</div><div>Rate limiting active on all auth and proxy endpoints</div></li>
+      <li><div class="ck yes">✓</div><div>CSP header present and configured in all responses</div></li>
+      <li><div class="ck yes">✓</div><div>CSRF tokens validated on all POST/DELETE/PATCH mutations</div></li>
+    </ul>
+
+    <h3>Phase 2 — Acceptance Criteria</h3>
+    <ul class="checklist">
+      <li><div class="ck no">○</div><div>API keys encrypted in DB — <code>SELECT key_value FROM user_api_keys</code> returns ciphertext, not plaintext</div></li>
+      <li><div class="ck no">○</div><div>Password reset tokens hashed — <code>SELECT token FROM password_reset_tokens</code> returns hash, not raw token</div></li>
+      <li><div class="ck no">○</div><div>Redis session store: sessions survive Node.js process restart</div></li>
+      <li><div class="ck no">○</div><div>Test suite passes: <code>npm test</code> exits 0 with ≥70% line coverage on services/ and middleware/</div></li>
+      <li><div class="ck no">○</div><div>Sentry DSN configured; errors in production generate Sentry alerts within 60 seconds</div></li>
+      <li><div class="ck no">○</div><div>Admin UI: upgrade, suspend, unsuspend operations functional via browser — no CLI required</div></li>
+      <li><div class="ck no">○</div><div>Onboarding flow: new free user sees tour on first login; Pro upsell shown at feature gate</div></li>
+      <li><div class="ck no">○</div><div>Microservice JWT: requests to :5001/:5002 without valid JWT return 401</div></li>
+      <li><div class="ck no">○</div><div>Admin pagination: <code>GET /api/admin/users?limit=50&amp;offset=0</code> returns paginated response</div></li>
+      <li><div class="ck no">○</div><div>On-chain data: whale alerts sourced from real API, not synthetic generator</div></li>
+    </ul>
+
+    <div class="card card-accent" style="margin-top:2rem">
+      <div style="font-size:.75rem;font-weight:700;text-transform:uppercase;letter-spacing:.1em;color:var(--muted);margin-bottom:.75rem">Sign-Off</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:1.5rem;font-size:.85rem">
+        <div>
+          <div style="color:var(--muted);margin-bottom:.25rem">Prepared by</div>
+          <div style="font-weight:700">TraderPro Engineering Team</div>
+          <div style="color:var(--muted);font-size:.78rem">May 7, 2026</div>
+        </div>
+        <div>
+          <div style="color:var(--muted);margin-bottom:.25rem">Document version</div>
+          <div style="font-weight:700">v1.0 — Phase 1 Complete</div>
+          <div style="color:var(--muted);font-size:.78rem">Next review: Phase 2 kickoff</div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+</main>
+</div>
+</div>
+</body>
+</html>

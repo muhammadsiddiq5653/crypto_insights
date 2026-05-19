@@ -166,4 +166,45 @@ async function changePassword(userId, currentPassword, newPassword) {
   return { success: true };
 }
 
-module.exports = { register, login, getProfile, changePassword, validatePassword, validateEmail, validateUsername };
+/**
+ * Generate a password-reset token and store it.
+ * Returns { success, token, email } — caller sends the email / logs it in dev.
+ * Always returns success:true to prevent user enumeration.
+ */
+async function forgotPassword(emailOrUsername) {
+  let user = db.getUserByEmail((emailOrUsername || '').toLowerCase());
+  if (!user) user = db.getUserByUsername((emailOrUsername || '').toLowerCase());
+  if (!user) return { success: true }; // silent — no enumeration
+
+  const crypto = require('crypto');
+  const token  = crypto.randomBytes(32).toString('hex');
+  db.createResetToken(user.id, token);
+  db.deleteExpiredResetTokens();
+
+  return { success: true, token, email: user.email, username: user.username };
+}
+
+/**
+ * Consume a reset token and set a new password.
+ */
+async function resetPassword(token, newPassword) {
+  if (!token) return { success: false, error: 'Invalid or expired reset link' };
+
+  const passwordErr = validatePassword(newPassword);
+  if (passwordErr) return { success: false, error: passwordErr };
+
+  // consumeResetToken atomically marks the token used and returns it — prevents replay race
+  const row = db.consumeResetToken(token);
+  if (!row) return { success: false, error: 'Invalid or expired reset link' };
+
+  const newHash = await bcrypt.hash(newPassword, SALT_ROUNDS);
+  db.getDb().prepare('UPDATE users SET password_hash = ? WHERE id = ?').run(newHash, row.user_id);
+
+  return { success: true };
+}
+
+module.exports = {
+  register, login, getProfile, changePassword,
+  forgotPassword, resetPassword,
+  validatePassword, validateEmail, validateUsername,
+};

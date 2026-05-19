@@ -572,5 +572,22 @@ const KellyPositionSizer = (() => {
     setTimeout(fetchPrice, 300);
   }
 
-  return { init, calculate, fetchPrice, calculateSizing };
+  // ── Signal bridge: size directly from a SignalBus signal ─────────────
+  // Returns a sizing result (same shape as calculateSizing) without touching the DOM.
+
+  function fromSignal(signal, capital) {
+    if (!signal?.price || signal.direction === 'NEUTRAL') return null;
+    const conf = Math.min(0.99, Math.max(0.01, (signal.confidence || 50) / 100));
+    return calculateSizing({
+      entryPrice: signal.price,
+      signal:     signal.direction === 'LONG' ? 'BUY' : 'SELL',
+      confidence: conf,
+      winRate:    0.55,
+      capital:    capital || 10000,
+      atrPct:     2.0,
+      maxPositionPct: 0.25,
+    });
+  }
+
+  return { init, calculate, fetchPrice, calculateSizing, fromSignal };
 })();

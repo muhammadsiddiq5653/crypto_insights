@@ -221,6 +221,22 @@ const NewsSentimentSignals = {
     this.renderOverview(results.filter(r => !r.error));
     this.renderSignals(results);
     this.currentData = results;
+
+    // Feed results into global signal bus
+    if (typeof SignalBus !== 'undefined') {
+      results.filter(r => !r.error && r.combined).forEach(r => {
+        const dir = (r.combined === 'strong-buy' || r.combined === 'buy') ? 'LONG'
+                  : r.combined === 'sell' ? 'SHORT' : 'NEUTRAL';
+        const conf = r.conviction ? Math.round(40 + r.conviction * 12) : 50;
+        const sym  = this.COIN_LABELS[r.coin] || r.coin.toUpperCase();
+        SignalBus.emit({
+          symbol: sym, direction: dir, confidence: conf,
+          source: 'news_sentiment',
+          reasons: [`News sentiment: ${r.newsScore >= 0 ? '+' : ''}${(r.newsScore * 100).toFixed(0)}%`,
+                    `Tech signal: ${r.techSignal}`, `Bull articles: ${r.bullCount}`, `Bear articles: ${r.bearCount}`],
+        });
+      });
+    }
   },
 
   async analyzeCoin(coinId) {

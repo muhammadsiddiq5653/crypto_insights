@@ -362,6 +362,9 @@
             </div>
           </div>
           <button type="submit" class="btn-submit" id="btn-login">Sign In</button>
+          <p style="text-align:center;margin-top:0.9rem;font-size:0.82rem">
+            <a href="#" id="link-forgot" style="color:var(--color-text-muted);text-decoration:underline">Forgot password?</a>
+          </p>
         </form>
       </div>
 
@@ -389,6 +392,53 @@
             </div>
           </div>
           <button type="submit" class="btn-submit" id="btn-register">Create Account</button>
+        </form>
+      </div>
+
+      <!-- Forgot-password panel (shown programmatically) -->
+      <div class="tab-panel" id="panel-forgot">
+        <form id="form-forgot">
+          <p style="font-size:0.875rem;color:var(--color-text-muted);margin-bottom:1.25rem">Enter your email and we'll send a reset link. Check your console in dev mode.</p>
+          <div class="form-group">
+            <label class="form-label">Email</label>
+            <input class="form-input" type="email" id="forgot-email" placeholder="you@example.com" autocomplete="email" required />
+          </div>
+          <button type="submit" class="btn-submit" id="btn-forgot">Send Reset Link</button>
+          <p style="text-align:center;margin-top:0.9rem;font-size:0.82rem">
+            <a href="#" id="link-back-login" style="color:var(--color-text-muted);text-decoration:underline">← Back to Sign In</a>
+          </p>
+        </form>
+      </div>
+
+      <!-- Reset-password panel (shown when ?action=reset&token=… in URL) -->
+      <div class="tab-panel" id="panel-reset">
+        <form id="form-reset">
+          <p style="font-size:0.875rem;color:var(--color-text-muted);margin-bottom:1.25rem">Choose a new password. Min 8 chars, 1 uppercase, 1 number.</p>
+          <div class="form-group">
+            <label class="form-label">New Password</label>
+            <div class="input-wrapper">
+              <input class="form-input" type="password" id="reset-password" placeholder="••••••••" autocomplete="new-password" required />
+              <button type="button" class="toggle-pw" data-target="reset-password">👁</button>
+            </div>
+          </div>
+          <button type="submit" class="btn-submit" id="btn-reset">Set New Password</button>
+        </form>
+      </div>
+
+      <!-- 2FA TOTP entry panel (shown after login when 2FA is required) -->
+      <div class="tab-panel" id="panel-totp">
+        <form id="form-totp">
+          <p style="font-size:0.875rem;color:var(--color-text-muted);margin-bottom:1.25rem;text-align:center">
+            🔐 Enter the 6-digit code from your authenticator app.
+          </p>
+          <div class="form-group">
+            <label class="form-label">Authenticator Code</label>
+            <input class="form-input" type="text" id="totp-code"
+              placeholder="000000" autocomplete="one-time-code"
+              inputmode="numeric" pattern="[0-9]{6}" maxlength="6"
+              style="font-size:1.5rem;letter-spacing:0.3em;text-align:center" required />
+          </div>
+          <button type="submit" class="btn-submit" id="btn-totp">Verify</button>
         </form>
       </div>
     </div>

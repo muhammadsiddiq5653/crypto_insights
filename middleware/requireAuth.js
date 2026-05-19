@@ -24,6 +24,7 @@ function requireAuth(req, res, next) {
 }
 
 // ── requireAdmin ──────────────────────────────────────────────────────
+// Used for API routes — returns JSON errors
 function requireAdmin(req, res, next) {
   if (!req.session || !req.session.userId) {
     return res.status(401).json({ error: 'Authentication required', code: 'UNAUTHENTICATED' });
@@ -35,6 +36,25 @@ function requireAdmin(req, res, next) {
   req.userRole = req.session.userRole;
   req.username = req.session.username;
   req.userPlan = 'pro'; // admins always have full access
+  next();
+}
+
+// ── requireAdminPage ──────────────────────────────────────────────────
+// Used for HTML page routes — redirects to /auth instead of returning JSON
+function requireAdminPage(req, res, next) {
+  if (!req.session || !req.session.userId) {
+    const next_ = req.originalUrl;
+    // Only allow relative paths — no protocol-relative or cross-origin redirects
+    const safeNext = /^\/(?!\/)/.test(next_) ? next_ : '/';
+    return res.redirect('/auth?next=' + encodeURIComponent(safeNext));
+  }
+  if (req.session.userRole !== 'admin') {
+    return res.redirect('/');
+  }
+  req.userId   = req.session.userId;
+  req.userRole = req.session.userRole;
+  req.username = req.session.username;
+  req.userPlan = 'pro';
   next();
 }
 
@@ -95,4 +115,4 @@ function optionalAuth(req, res, next) {
   next();
 }
 
-module.exports = { requireAuth, requireAdmin, requirePlan, optionalAuth };
+module.exports = { requireAuth, requireAdmin, requireAdminPage, requirePlan, optionalAuth };

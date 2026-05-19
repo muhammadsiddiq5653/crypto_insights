@@ -1,0 +1,735 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>TraderPro — Investor Pitch Deck</title>
+<style>
+  :root {
+    --accent:#5b72ff;--cyan:#00d4ff;--green:#00e87a;--red:#ff5f57;
+    --bg:#0a0b0f;--bg2:#10121a;--bg3:#181c28;--border:#1e2435;
+    --text:#e8eaf0;--muted:#6b7280;--card:#13161f;
+  }
+  *{margin:0;padding:0;box-sizing:border-box}
+  html{scroll-behavior:smooth}
+  body{font-family:'Segoe UI',system-ui,sans-serif;background:var(--bg);color:var(--text);line-height:1.6}
+
+  /* ── SLIDE LAYOUT ── */
+  .slide{min-height:100vh;display:flex;flex-direction:column;justify-content:center;align-items:center;padding:5rem 3rem;position:relative;overflow:hidden;border-bottom:1px solid var(--border)}
+  .slide-inner{max-width:1100px;width:100%;z-index:2;position:relative}
+  .slide-num{position:absolute;top:1.5rem;right:2rem;font-size:.7rem;color:var(--muted);letter-spacing:.15em;text-transform:uppercase}
+
+  /* ── SLIDE 1: COVER ── */
+  .cover{background:radial-gradient(ellipse 80% 60% at 50% 0%,#1a1f3a 0%,var(--bg) 70%)}
+  .cover .logo{font-size:1rem;font-weight:700;color:var(--accent);letter-spacing:.2em;text-transform:uppercase;margin-bottom:3rem;display:flex;align-items:center;gap:.5rem}
+  .cover .logo::before{content:'';width:8px;height:8px;background:var(--accent);border-radius:50%;display:inline-block;box-shadow:0 0 12px var(--accent)}
+  .cover h1{font-size:clamp(2.5rem,6vw,4.5rem);font-weight:800;line-height:1.1;margin-bottom:1.5rem;background:linear-gradient(135deg,#fff 0%,var(--cyan) 50%,var(--accent) 100%);-webkit-background-clip:text;-webkit-text-fill-color:transparent}
+  .cover .tagline{font-size:1.3rem;color:var(--muted);max-width:600px;margin-bottom:3rem}
+  .cover .badges{display:flex;gap:1rem;flex-wrap:wrap}
+  .badge{padding:.4rem 1rem;border-radius:999px;font-size:.78rem;font-weight:600;border:1px solid}
+  .badge.blue{border-color:var(--accent);color:var(--accent);background:#5b72ff12}
+  .badge.green{border-color:var(--green);color:var(--green);background:#00e87a12}
+  .badge.cyan{border-color:var(--cyan);color:var(--cyan);background:#00d4ff12}
+  .grid-bg{position:absolute;inset:0;background-image:linear-gradient(var(--border) 1px,transparent 1px),linear-gradient(90deg,var(--border) 1px,transparent 1px);background-size:40px 40px;opacity:.3}
+
+  /* ── SECTION HEADERS ── */
+  .slide-label{font-size:.72rem;font-weight:700;letter-spacing:.2em;text-transform:uppercase;color:var(--accent);margin-bottom:.75rem}
+  .slide-title{font-size:clamp(1.8rem,4vw,2.8rem);font-weight:800;margin-bottom:.5rem;line-height:1.15}
+  .slide-sub{font-size:1rem;color:var(--muted);margin-bottom:2.5rem;max-width:700px}
+
+  /* ── CARDS ── */
+  .card{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:1.5rem}
+  .card-sm{padding:1.1rem 1.25rem;border-radius:10px}
+  .grid-2{display:grid;grid-template-columns:1fr 1fr;gap:1.25rem}
+  .grid-3{display:grid;grid-template-columns:repeat(3,1fr);gap:1.25rem}
+  .grid-4{display:grid;grid-template-columns:repeat(4,1fr);gap:1rem}
+
+  /* ── STAT BLOCKS ── */
+  .stat-block{text-align:center}
+  .stat-num{font-size:2.5rem;font-weight:900;line-height:1;background:linear-gradient(135deg,var(--cyan),var(--accent));-webkit-background-clip:text;-webkit-text-fill-color:transparent}
+  .stat-label{font-size:.8rem;color:var(--muted);margin-top:.3rem;text-transform:uppercase;letter-spacing:.1em}
+
+  /* ── PROBLEM ── */
+  .problem-item{display:flex;gap:1rem;align-items:flex-start;padding:1rem 1.25rem;background:var(--card);border:1px solid var(--border);border-radius:10px;border-left:3px solid var(--red)}
+  .problem-icon{font-size:1.5rem;flex-shrink:0}
+  .problem-title{font-weight:700;font-size:.95rem;margin-bottom:.2rem}
+  .problem-desc{font-size:.83rem;color:var(--muted)}
+
+  /* ── SOLUTION ── */
+  .feature-pill{display:flex;align-items:center;gap:.75rem;padding:.85rem 1.1rem;background:var(--card);border:1px solid var(--border);border-radius:8px}
+  .feature-pill .icon{width:34px;height:34px;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:1rem;flex-shrink:0}
+  .feature-pill .ftitle{font-weight:600;font-size:.88rem}
+  .feature-pill .fdesc{font-size:.76rem;color:var(--muted)}
+
+  /* ── COMPETITION TABLE ── */
+  table.comp{width:100%;border-collapse:collapse;font-size:.85rem}
+  table.comp th{padding:.75rem 1rem;text-align:left;color:var(--muted);font-weight:600;font-size:.75rem;text-transform:uppercase;letter-spacing:.08em;border-bottom:1px solid var(--border)}
+  table.comp td{padding:.75rem 1rem;border-bottom:1px solid #1a1d28}
+  table.comp tr.us td{background:#5b72ff0a;font-weight:700}
+  table.comp tr.us td:first-child{color:var(--accent)}
+  .check{color:var(--green)}
+  .cross{color:var(--red)}
+  .partial{color:#f59e0b}
+
+  /* ── MARKET ── */
+  .market-row{display:flex;align-items:center;gap:1.5rem;padding:1rem 1.25rem;background:var(--card);border:1px solid var(--border);border-radius:10px}
+  .market-bar-wrap{flex:1;height:8px;background:#1a1d28;border-radius:4px;overflow:hidden}
+  .market-bar{height:100%;border-radius:4px;background:linear-gradient(90deg,var(--accent),var(--cyan))}
+  .market-label{font-weight:700;font-size:.9rem;min-width:50px}
+  .market-val{font-size:.82rem;color:var(--muted);min-width:90px;text-align:right}
+
+  /* ── TRACTION ── */
+  .traction-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:1rem}
+  .traction-card{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:1.5rem;text-align:center}
+  .traction-card .num{font-size:2rem;font-weight:900;line-height:1;margin-bottom:.3rem}
+  .traction-card .lbl{font-size:.75rem;color:var(--muted);text-transform:uppercase;letter-spacing:.1em}
+
+  /* ── ROADMAP ── */
+  .roadmap-row{display:grid;grid-template-columns:120px 1fr;gap:1.5rem;margin-bottom:1.25rem;align-items:flex-start}
+  .roadmap-phase{background:var(--card);border:1px solid var(--border);border-radius:8px;padding:.6rem .9rem;text-align:center}
+  .roadmap-phase .ph{font-size:.7rem;color:var(--muted);text-transform:uppercase;letter-spacing:.1em}
+  .roadmap-phase .qt{font-weight:800;color:var(--accent);font-size:.95rem}
+  .roadmap-items{display:flex;flex-wrap:wrap;gap:.5rem}
+  .roadmap-item{padding:.3rem .75rem;background:#5b72ff14;border:1px solid #5b72ff30;border-radius:6px;font-size:.78rem;color:var(--text)}
+  .roadmap-item.done{background:#00e87a10;border-color:#00e87a30;color:var(--green)}
+
+  /* ── BUSINESS MODEL ── */
+  .tier-card{background:var(--card);border:1px solid var(--border);border-radius:14px;padding:1.75rem;position:relative;overflow:hidden}
+  .tier-card.featured{border-color:var(--accent);background:#5b72ff08}
+  .tier-card.featured::before{content:'RECOMMENDED';position:absolute;top:12px;right:-28px;background:var(--accent);color:#fff;font-size:.6rem;font-weight:800;letter-spacing:.15em;padding:.2rem 2.5rem;transform:rotate(35deg);transform-origin:center}
+  .tier-price{font-size:2.2rem;font-weight:900;line-height:1}
+  .tier-price span{font-size:.9rem;font-weight:400;color:var(--muted)}
+  .tier-name{font-size:1rem;font-weight:700;margin-bottom:.5rem}
+  .tier-desc{font-size:.8rem;color:var(--muted);margin-bottom:1.25rem}
+  .tier-features li{font-size:.82rem;color:var(--muted);margin-bottom:.4rem;list-style:none;display:flex;gap:.5rem}
+  .tier-features li::before{content:'✓';color:var(--green);font-weight:700}
+
+  /* ── FINANCIALS ── */
+  .fin-row{display:flex;justify-content:space-between;align-items:center;padding:.7rem 0;border-bottom:1px solid var(--border);font-size:.88rem}
+  .fin-row:last-child{border-bottom:none}
+  .fin-label{color:var(--muted)}
+  .fin-val{font-weight:700}
+  .fin-val.green{color:var(--green)}
+  .fin-val.accent{color:var(--accent)}
+
+  /* ── TEAM ── */
+  .team-card{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:1.5rem;text-align:center}
+  .team-avatar{width:70px;height:70px;border-radius:50%;background:linear-gradient(135deg,var(--accent),var(--cyan));display:flex;align-items:center;justify-content:center;font-size:1.6rem;font-weight:800;margin:0 auto 1rem;color:#fff}
+  .team-name{font-weight:700;font-size:1rem}
+  .team-role{font-size:.8rem;color:var(--accent);margin-bottom:.5rem}
+  .team-bio{font-size:.78rem;color:var(--muted);line-height:1.5}
+
+  /* ── ASK ── */
+  .ask-highlight{font-size:clamp(2.5rem,5vw,4rem);font-weight:900;background:linear-gradient(135deg,var(--green),var(--cyan));-webkit-background-clip:text;-webkit-text-fill-color:transparent;margin-bottom:.5rem;line-height:1}
+  .use-item{display:flex;justify-content:space-between;align-items:center;padding:.9rem 1.1rem;background:var(--card);border:1px solid var(--border);border-radius:8px}
+  .use-item .bar-wrap{width:140px;height:6px;background:#1a1d28;border-radius:3px;overflow:hidden}
+  .use-item .bar{height:100%;border-radius:3px}
+
+  /* ── FOOTER ── */
+  .cta-slide{background:radial-gradient(ellipse 80% 70% at 50% 50%,#1a1f3a 0%,var(--bg) 70%);text-align:center}
+  .cta-slide h2{font-size:clamp(2rem,5vw,3.5rem);font-weight:900;margin-bottom:1rem;background:linear-gradient(135deg,#fff,var(--cyan));-webkit-background-clip:text;-webkit-text-fill-color:transparent}
+  .cta-slide p{font-size:1.1rem;color:var(--muted);margin-bottom:2rem;max-width:500px;margin-left:auto;margin-right:auto}
+  .btn{display:inline-block;padding:.9rem 2.5rem;background:linear-gradient(135deg,var(--accent),var(--cyan));color:#fff;font-weight:700;border-radius:8px;text-decoration:none;font-size:.95rem}
+
+  /* NAV */
+  .nav{position:fixed;top:0;left:0;right:0;z-index:100;background:#0a0b0fcc;backdrop-filter:blur(12px);border-bottom:1px solid var(--border);padding:.75rem 2rem;display:flex;align-items:center;justify-content:space-between}
+  .nav-logo{font-weight:800;color:var(--accent);font-size:.9rem;letter-spacing:.1em}
+  .nav-links{display:flex;gap:1.5rem}
+  .nav-links a{font-size:.78rem;color:var(--muted);text-decoration:none;transition:color .2s}
+  .nav-links a:hover{color:var(--text)}
+
+  /* DIVIDER */
+  .divider{width:60px;height:3px;background:linear-gradient(90deg,var(--accent),var(--cyan));border-radius:2px;margin-bottom:2rem}
+
+  @media(max-width:768px){
+    .grid-2,.grid-3,.grid-4,.traction-grid{grid-template-columns:1fr}
+    .slide{padding:4rem 1.5rem}
+  }
+</style>
+</head>
+<body>
+
+<nav class="nav">
+  <div class="nav-logo">⬡ TRADERPRO</div>
+  <div class="nav-links">
+    <a href="#problem">Problem</a>
+    <a href="#solution">Solution</a>
+    <a href="#market">Market</a>
+    <a href="#model">Model</a>
+    <a href="#ask">Ask</a>
+  </div>
+</nav>
+
+<!-- ═══ SLIDE 1: COVER ═══ -->
+<section class="slide cover">
+  <div class="grid-bg"></div>
+  <div class="slide-inner">
+    <div class="logo">⬡ TRADERPRO</div>
+    <h1>The Complete<br/>Crypto Trading OS</h1>
+    <p class="tagline">One platform replacing 5 tools — signals, on-chain data, AI analysis, backtesting, and portfolio management for $20/month.</p>
+    <div class="badges">
+      <span class="badge blue">Series A Ready</span>
+      <span class="badge green">40+ Features Live</span>
+      <span class="badge cyan">13 APIs Integrated</span>
+    </div>
+  </div>
+</section>
+
+<!-- ═══ SLIDE 2: THE PROBLEM ═══ -->
+<section class="slide" id="problem">
+  <div class="slide-num">02 / 12</div>
+  <div class="slide-inner">
+    <div class="slide-label">The Problem</div>
+    <div class="slide-title">Retail traders juggle 5+ tools<br/>and still miss the full picture</div>
+    <p class="slide-sub">The average active crypto trader spends $60–$120/month across fragmented tools that don't talk to each other.</p>
+    <div class="divider"></div>
+    <div style="display:flex;flex-direction:column;gap:.85rem">
+      <div class="problem-item">
+        <div class="problem-icon">💸</div>
+        <div>
+          <div class="problem-title">Tool overload = cost overload</div>
+          <div class="problem-desc">TradingView ($60) + CoinStats ($30) + Glassnode ($30) + Token Metrics ($35) + manual spreadsheets = $155/mo minimum for a complete stack.</div>
+        </div>
+      </div>
+      <div class="problem-item">
+        <div class="problem-icon">🧩</div>
+        <div>
+          <div class="problem-title">Fragmented context kills trade quality</div>
+          <div class="problem-desc">Technical analysis in one tab, on-chain data in another, macro in a third. Context-switching causes missed signals and poor timing.</div>
+        </div>
+      </div>
+      <div class="problem-item">
+        <div class="problem-icon">🤖</div>
+        <div>
+          <div class="problem-title">AI tools exist but aren't actionable</div>
+          <div class="problem-desc">AI trading assistants give generic advice not grounded in real indicators. No connection between LLM reasoning and live market data.</div>
+        </div>
+      </div>
+      <div class="problem-item">
+        <div class="problem-icon">🌍</div>
+        <div>
+          <div class="problem-title">Emerging markets are underserved</div>
+          <div class="problem-desc">100M+ retail traders in Pakistan, UAE, and South Asia have no localized trading OS — no PKR forex pairs, no PSX integration, no local market context.</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ═══ SLIDE 3: SOLUTION ═══ -->
+<section class="slide" id="solution">
+  <div class="slide-num">03 / 12</div>
+  <div class="slide-inner">
+    <div class="slide-label">The Solution</div>
+    <div class="slide-title">TraderPro: One cockpit.<br/>Everything you need.</div>
+    <p class="slide-sub">A unified web platform that replaces your entire trading toolkit — live for production use today.</p>
+    <div class="divider"></div>
+    <div class="grid-3" style="margin-bottom:1rem">
+      <div class="feature-pill"><div class="icon" style="background:#5b72ff20">📡</div><div><div class="ftitle">Live Signal Radar</div><div class="fdesc">Multi-timeframe signals from 15+ WebSocket feeds</div></div></div>
+      <div class="feature-pill"><div class="icon" style="background:#00d4ff20">🤖</div><div><div class="ftitle">AI Agent Council</div><div class="fdesc">3 specialist agents + Chief Analyst with LLM synthesis</div></div></div>
+      <div class="feature-pill"><div class="icon" style="background:#00e87a20">📊</div><div><div class="ftitle">Backtester</div><div class="fdesc">90d+ strategy simulation with Sharpe/Calmar scoring</div></div></div>
+      <div class="feature-pill"><div class="icon" style="background:#f59e0b20">🔔</div><div><div class="ftitle">Smart Alerts</div><div class="fdesc">Price/RSI rules + server-side Slack notifications</div></div></div>
+      <div class="feature-pill"><div class="icon" style="background:#5b72ff20">💼</div><div><div class="ftitle">Portfolio Tracker</div><div class="fdesc">Live P&L with Binance sync + allocation chart</div></div></div>
+      <div class="feature-pill"><div class="icon" style="background:#00d4ff20">📓</div><div><div class="ftitle">Trade Journal</div><div class="fdesc">Log & analyse trades with R:R, P&L, CSV export</div></div></div>
+      <div class="feature-pill"><div class="icon" style="background:#00e87a20">🔗</div><div><div class="ftitle">On-Chain Analytics</div><div class="fdesc">Whale alerts, exchange flows, liquidation heatmaps</div></div></div>
+      <div class="feature-pill"><div class="icon" style="background:#f59e0b20">🌐</div><div><div class="ftitle">Macro Dashboard</div><div class="fdesc">FRED: Fed Funds, CPI, GDP, unemployment, yields</div></div></div>
+      <div class="feature-pill"><div class="icon" style="background:#5b72ff20">🇵🇰</div><div><div class="ftitle">PSX + PKR Markets</div><div class="fdesc">KSE-100, local stocks, Pakistan forex pairs</div></div></div>
+    </div>
+    <div style="background:var(--card);border:1px solid var(--border);border-radius:12px;padding:1.25rem;display:flex;gap:2rem;flex-wrap:wrap">
+      <div class="stat-block"><div class="stat-num">40+</div><div class="stat-label">Features shipped</div></div>
+      <div class="stat-block"><div class="stat-num">108</div><div class="stat-label">API endpoints</div></div>
+      <div class="stat-block"><div class="stat-num">13</div><div class="stat-label">Exchanges & data sources</div></div>
+      <div class="stat-block"><div class="stat-num">19</div><div class="stat-label">Database tables</div></div>
+      <div class="stat-block"><div class="stat-num">35k+</div><div class="stat-label">Lines of code</div></div>
+    </div>
+  </div>
+</section>
+
+<!-- ═══ SLIDE 4: MARKET OPPORTUNITY ═══ -->
+<section class="slide" id="market">
+  <div class="slide-num">04 / 12</div>
+  <div class="slide-inner">
+    <div class="slide-label">Market Opportunity</div>
+    <div class="slide-title">A $4.8B addressable market<br/>growing at 23% CAGR</div>
+    <p class="slide-sub">Crypto trading tools are a massive, fragmented market. We consolidate where incumbents won't go.</p>
+    <div class="divider"></div>
+    <div class="grid-2" style="margin-bottom:2rem">
+      <div class="card">
+        <div style="display:flex;flex-direction:column;gap:1rem">
+          <div class="market-row">
+            <div class="market-label" style="color:var(--muted);font-size:.75rem;text-transform:uppercase">TAM</div>
+            <div class="market-bar-wrap"><div class="market-bar" style="width:100%"></div></div>
+            <div class="market-val">$4.8B globally</div>
+          </div>
+          <div class="market-row">
+            <div class="market-label" style="color:var(--muted);font-size:.75rem;text-transform:uppercase">SAM</div>
+            <div class="market-bar-wrap"><div class="market-bar" style="width:42%"></div></div>
+            <div class="market-val">$2.0B reachable</div>
+          </div>
+          <div class="market-row">
+            <div class="market-label" style="color:var(--muted);font-size:.75rem;text-transform:uppercase">SOM</div>
+            <div class="market-bar-wrap"><div class="market-bar" style="width:12%"></div></div>
+            <div class="market-val">$240M Y3 target</div>
+          </div>
+        </div>
+      </div>
+      <div class="card">
+        <div style="font-size:.8rem;color:var(--muted);margin-bottom:1rem;font-weight:600;text-transform:uppercase;letter-spacing:.08em">Key Tailwinds</div>
+        <div style="display:flex;flex-direction:column;gap:.75rem">
+          <div style="display:flex;gap:.75rem;align-items:center;font-size:.87rem"><span style="color:var(--green)">↑</span><span>100M+ global retail crypto traders</span></div>
+          <div style="display:flex;gap:.75rem;align-items:center;font-size:.87rem"><span style="color:var(--green)">↑</span><span>Pakistan ranks #6 globally for crypto adoption</span></div>
+          <div style="display:flex;gap:.75rem;align-items:center;font-size:.87rem"><span style="color:var(--green)">↑</span><span>AI-native tools driving 40% higher engagement</span></div>
+          <div style="display:flex;gap:.75rem;align-items:center;font-size:.87rem"><span style="color:var(--green)">↑</span><span>Macro volatility drives tool consolidation</span></div>
+          <div style="display:flex;gap:.75rem;align-items:center;font-size:.87rem"><span style="color:var(--green)">↑</span><span>Bull cycle → new retail cohort entering 2025–26</span></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ═══ SLIDE 5: COMPETITION ═══ -->
+<section class="slide">
+  <div class="slide-num">05 / 12</div>
+  <div class="slide-inner">
+    <div class="slide-label">Competitive Landscape</div>
+    <div class="slide-title">80% cheaper.<br/>5× more capable.</div>
+    <p class="slide-sub">No single competitor offers the full stack at our price point. We consolidate the entire toolkit.</p>
+    <div class="divider"></div>
+    <div class="card">
+      <table class="comp">
+        <thead>
+          <tr>
+            <th>Platform</th>
+            <th>Price/mo</th>
+            <th>AI Signals</th>
+            <th>On-Chain</th>
+            <th>Backtester</th>
+            <th>Macro Data</th>
+            <th>Emerging Markets</th>
+            <th>Portfolio+Journal</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr class="us">
+            <td>⬡ TraderPro</td>
+            <td style="color:var(--green)">$20</td>
+            <td class="check">✓ LLM+ML</td>
+            <td class="check">✓</td>
+            <td class="check">✓</td>
+            <td class="check">✓ FRED</td>
+            <td class="check">✓ PSX+PKR</td>
+            <td class="check">✓</td>
+          </tr>
+          <tr>
+            <td>TradingView Pro</td>
+            <td>$59.95</td>
+            <td class="cross">✗</td>
+            <td class="cross">✗</td>
+            <td class="partial">~ basic</td>
+            <td class="cross">✗</td>
+            <td class="cross">✗</td>
+            <td class="cross">✗</td>
+          </tr>
+          <tr>
+            <td>Token Metrics</td>
+            <td>$34.99</td>
+            <td class="partial">~ generic</td>
+            <td class="partial">~ basic</td>
+            <td class="cross">✗</td>
+            <td class="cross">✗</td>
+            <td class="cross">✗</td>
+            <td class="cross">✗</td>
+          </tr>
+          <tr>
+            <td>CoinStats Premium</td>
+            <td>$29.99</td>
+            <td class="cross">✗</td>
+            <td class="cross">✗</td>
+            <td class="cross">✗</td>
+            <td class="cross">✗</td>
+            <td class="cross">✗</td>
+            <td class="check">✓</td>
+          </tr>
+          <tr>
+            <td>Glassnode Studio</td>
+            <td>$29</td>
+            <td class="cross">✗</td>
+            <td class="check">✓</td>
+            <td class="cross">✗</td>
+            <td class="cross">✗</td>
+            <td class="cross">✗</td>
+            <td class="cross">✗</td>
+          </tr>
+          <tr>
+            <td>Messari Pro</td>
+            <td>$99</td>
+            <td class="partial">~ research</td>
+            <td class="partial">~ basic</td>
+            <td class="cross">✗</td>
+            <td class="partial">~ limited</td>
+            <td class="cross">✗</td>
+            <td class="cross">✗</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+    <div style="margin-top:1.5rem;display:flex;gap:1rem;flex-wrap:wrap">
+      <div class="card card-sm" style="flex:1;border-left:3px solid var(--green)">
+        <div style="font-size:1.6rem;font-weight:900;color:var(--green)">$155/mo</div>
+        <div style="font-size:.8rem;color:var(--muted)">What users spend buying the equivalent across 4 tools</div>
+      </div>
+      <div class="card card-sm" style="flex:1;border-left:3px solid var(--accent)">
+        <div style="font-size:1.6rem;font-weight:900;color:var(--accent)">$20/mo</div>
+        <div style="font-size:.8rem;color:var(--muted)">TraderPro Pro — all features, one subscription</div>
+      </div>
+      <div class="card card-sm" style="flex:1;border-left:3px solid var(--cyan)">
+        <div style="font-size:1.6rem;font-weight:900;color:var(--cyan)">87%</div>
+        <div style="font-size:.8rem;color:var(--muted)">Cost saving vs. assembling an equivalent stack</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ═══ SLIDE 6: PRODUCT DEPTH ═══ -->
+<section class="slide">
+  <div class="slide-num">06 / 12</div>
+  <div class="slide-inner">
+    <div class="slide-label">Product Architecture</div>
+    <div class="slide-title">Enterprise-grade tech.<br/>Consumer-grade price.</div>
+    <p class="slide-sub">Production-hardened stack with 6 months of compound security hardening.</p>
+    <div class="divider"></div>
+    <div class="grid-3">
+      <div class="card">
+        <div style="font-size:.75rem;font-weight:700;text-transform:uppercase;letter-spacing:.1em;color:var(--accent);margin-bottom:1rem">Backend</div>
+        <div style="display:flex;flex-direction:column;gap:.5rem;font-size:.83rem;color:var(--muted)">
+          <div>⬡ Node.js + Express 4.18</div>
+          <div>⬡ SQLite (2 DBs: app + market)</div>
+          <div>⬡ Python microservices (ML + backtest)</div>
+          <div>⬡ 108 REST API endpoints</div>
+          <div>⬡ 60s server-side alert cron</div>
+          <div>⬡ TTL-based API response cache</div>
+        </div>
+      </div>
+      <div class="card">
+        <div style="font-size:.75rem;font-weight:700;text-transform:uppercase;letter-spacing:.1em;color:var(--cyan);margin-bottom:1rem">Security</div>
+        <div style="display:flex;flex-direction:column;gap:.5rem;font-size:.83rem;color:var(--muted)">
+          <div>⬡ bcrypt 12-round password hashing</div>
+          <div>⬡ CSRF double-submit tokens</div>
+          <div>⬡ TOTP / 2FA (speakeasy + QR)</div>
+          <div>⬡ Session fixation prevention</div>
+          <div>⬡ Helmet CSP + security headers</div>
+          <div>⬡ Per-endpoint rate limiting</div>
+        </div>
+      </div>
+      <div class="card">
+        <div style="font-size:.75rem;font-weight:700;text-transform:uppercase;letter-spacing:.1em;color:var(--green);margin-bottom:1rem">Data Sources</div>
+        <div style="display:flex;flex-direction:column;gap:.5rem;font-size:.83rem;color:var(--muted)">
+          <div>⬡ Binance, CoinGecko, Kraken</div>
+          <div>⬡ Coinbase, Bybit, OKX</div>
+          <div>⬡ FRED (Federal Reserve)</div>
+          <div>⬡ Polymarket prediction markets</div>
+          <div>⬡ PSX (Pakistan Stock Exchange)</div>
+          <div>⬡ Frankfurter FX + Fear & Greed</div>
+        </div>
+      </div>
+    </div>
+    <div style="margin-top:1.25rem" class="card">
+      <div style="font-size:.75rem;font-weight:700;text-transform:uppercase;letter-spacing:.1em;color:var(--muted);margin-bottom:1rem">AI / ML Capabilities</div>
+      <div class="grid-4">
+        <div style="text-align:center;padding:.75rem">
+          <div style="font-size:1.4rem;margin-bottom:.3rem">🤖</div>
+          <div style="font-size:.78rem;font-weight:700">LLM Agent Council</div>
+          <div style="font-size:.72rem;color:var(--muted)">Mistral-7B via OpenRouter</div>
+        </div>
+        <div style="text-align:center;padding:.75rem">
+          <div style="font-size:1.4rem;margin-bottom:.3rem">📈</div>
+          <div style="font-size:.78rem;font-weight:700">Price Prediction</div>
+          <div style="font-size:.72rem;color:var(--muted)">Ensemble: RF + GB + LinReg</div>
+        </div>
+        <div style="text-align:center;padding:.75rem">
+          <div style="font-size:1.4rem;margin-bottom:.3rem">⚡</div>
+          <div style="font-size:.75rem;font-weight:700">Strategy Backtesting</div>
+          <div style="font-size:.72rem;color:var(--muted)">Sharpe / Calmar evaluation</div>
+        </div>
+        <div style="text-align:center;padding:.75rem">
+          <div style="font-size:1.4rem;margin-bottom:.3rem">🎯</div>
+          <div style="font-size:.78rem;font-weight:700">Kelly Position Sizer</div>
+          <div style="font-size:.72rem;color:var(--muted)">Optimal sizing from journal</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ═══ SLIDE 7: BUSINESS MODEL ═══ -->
+<section class="slide" id="model">
+  <div class="slide-num">07 / 12</div>
+  <div class="slide-inner">
+    <div class="slide-label">Business Model</div>
+    <div class="slide-title">Freemium SaaS with<br/>high-conversion free tier</div>
+    <p class="slide-sub">Free tier drives acquisition, Pro converts on value. Team tier targets prop desks and crypto funds.</p>
+    <div class="divider"></div>
+    <div class="grid-3">
+      <div class="tier-card">
+        <div class="tier-name">Free</div>
+        <div class="tier-price">$0<span>/mo</span></div>
+        <div class="tier-desc">For beginners building their first trading system</div>
+        <ul class="tier-features">
+          <li>5 cryptocurrencies</li>
+          <li>Basic technical analysis</li>
+          <li>Trade journal (20 trades)</li>
+          <li>Price alerts (3 active)</li>
+          <li>Academy + glossary</li>
+          <li>DCA calculator</li>
+        </ul>
+      </div>
+      <div class="tier-card featured">
+        <div class="tier-name">Pro</div>
+        <div class="tier-price">$20<span>/mo</span></div>
+        <div class="tier-desc">For active traders who need the complete stack</div>
+        <ul class="tier-features">
+          <li>250+ coins + all markets</li>
+          <li>AI Agent Council + LLM reasoning</li>
+          <li>Multi-timeframe signal radar</li>
+          <li>On-chain analytics + heatmaps</li>
+          <li>Backtester + strategy builder</li>
+          <li>Unlimited alerts + Slack relay</li>
+          <li>ML price predictions</li>
+          <li>Macro dashboard (FRED)</li>
+          <li>Kelly position sizer</li>
+          <li>Binance portfolio sync</li>
+        </ul>
+      </div>
+      <div class="tier-card">
+        <div class="tier-name">Team</div>
+        <div class="tier-price">$50<span>/mo</span></div>
+        <div class="tier-desc">For prop desks and crypto investment teams</div>
+        <ul class="tier-features">
+          <li>Everything in Pro</li>
+          <li>5 team members</li>
+          <li>Shared alert rooms</li>
+          <li>Admin dashboard</li>
+          <li>White-label (coming Q3)</li>
+          <li>Priority support</li>
+          <li>SLA guarantee</li>
+        </ul>
+      </div>
+    </div>
+    <div style="margin-top:1.5rem" class="card">
+      <div style="font-size:.75rem;font-weight:700;text-transform:uppercase;letter-spacing:.1em;color:var(--muted);margin-bottom:1rem">Future Revenue Streams</div>
+      <div class="grid-3" style="gap:.75rem">
+        <div style="font-size:.83rem"><span style="color:var(--accent)">→</span> <strong>API Tier</strong> — Rate-limited REST API for prop traders and hedge funds</div>
+        <div style="font-size:.83rem"><span style="color:var(--cyan)">→</span> <strong>Affiliate Revenue</strong> — Exchange referral commissions (Binance, Bybit)</div>
+        <div style="font-size:.83rem"><span style="color:var(--green)">→</span> <strong>Data Licensing</strong> — Signal feed licensing to institutional desks</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ═══ SLIDE 8: FINANCIALS ═══ -->
+<section class="slide">
+  <div class="slide-num">08 / 12</div>
+  <div class="slide-inner">
+    <div class="slide-label">Financial Projections</div>
+    <div class="slide-title">Path to $1.2M ARR<br/>within 18 months</div>
+    <p class="slide-sub">Conservative model based on 20% free-to-pro conversion with 5% monthly churn.</p>
+    <div class="divider"></div>
+    <div class="grid-2">
+      <div class="card">
+        <div style="font-size:.75rem;font-weight:700;text-transform:uppercase;letter-spacing:.1em;color:var(--muted);margin-bottom:1rem">Year 1 Projections</div>
+        <div class="fin-row"><div class="fin-label">Free signups (target)</div><div class="fin-val">10,000</div></div>
+        <div class="fin-row"><div class="fin-label">Pro conversions (20%)</div><div class="fin-val">2,000</div></div>
+        <div class="fin-row"><div class="fin-label">Team accounts</div><div class="fin-val">150</div></div>
+        <div class="fin-row"><div class="fin-label">MRR (end Y1)</div><div class="fin-val accent">$47,500</div></div>
+        <div class="fin-row"><div class="fin-label">ARR (end Y1)</div><div class="fin-val green">$570,000</div></div>
+        <div class="fin-row"><div class="fin-label">Churn rate (monthly)</div><div class="fin-val">5%</div></div>
+      </div>
+      <div class="card">
+        <div style="font-size:.75rem;font-weight:700;text-transform:uppercase;letter-spacing:.1em;color:var(--muted);margin-bottom:1rem">Unit Economics</div>
+        <div class="fin-row"><div class="fin-label">ARPU (Pro)</div><div class="fin-val">$20/mo</div></div>
+        <div class="fin-row"><div class="fin-label">ARPU (Team)</div><div class="fin-val">$50/mo</div></div>
+        <div class="fin-row"><div class="fin-label">Gross Margin</div><div class="fin-val green">~85%</div></div>
+        <div class="fin-row"><div class="fin-label">CAC (organic)</div><div class="fin-val">$8</div></div>
+        <div class="fin-row"><div class="fin-label">LTV (Pro, 20mo avg)</div><div class="fin-val accent">$400</div></div>
+        <div class="fin-row"><div class="fin-label">LTV:CAC Ratio</div><div class="fin-val green">50:1</div></div>
+      </div>
+    </div>
+    <div style="margin-top:1.25rem;display:grid;grid-template-columns:repeat(3,1fr);gap:1rem">
+      <div class="card" style="text-align:center">
+        <div style="font-size:1.8rem;font-weight:900;color:var(--accent)">Y1: $570K</div>
+        <div style="font-size:.78rem;color:var(--muted)">ARR — soft launch, organic growth</div>
+      </div>
+      <div class="card" style="text-align:center">
+        <div style="font-size:1.8rem;font-weight:900;color:var(--cyan)">Y2: $1.4M</div>
+        <div style="font-size:.78rem;color:var(--muted)">ARR — paid acquisition + API tier</div>
+      </div>
+      <div class="card" style="text-align:center">
+        <div style="font-size:1.8rem;font-weight:900;color:var(--green)">Y3: $4.2M</div>
+        <div style="font-size:.78rem;color:var(--muted)">ARR — white-label + institutional</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ═══ SLIDE 9: TRACTION ═══ -->
+<section class="slide">
+  <div class="slide-num">09 / 12</div>
+  <div class="slide-inner">
+    <div class="slide-label">Traction & Milestones</div>
+    <div class="slide-title">Built in 6 months.<br/>Production-ready today.</div>
+    <p class="slide-sub">From zero to a fully hardened, feature-complete trading platform.</p>
+    <div class="divider"></div>
+    <div class="traction-grid" style="margin-bottom:2rem">
+      <div class="traction-card"><div class="num" style="color:var(--accent)">40+</div><div class="lbl">Features Shipped</div></div>
+      <div class="traction-card"><div class="num" style="color:var(--cyan)">108</div><div class="lbl">API Endpoints</div></div>
+      <div class="traction-card"><div class="num" style="color:var(--green)">19</div><div class="lbl">DB Tables</div></div>
+      <div class="traction-card"><div class="num" style="color:#f59e0b">35k+</div><div class="lbl">Lines of Code</div></div>
+    </div>
+    <div class="roadmap-row">
+      <div class="roadmap-phase"><div class="ph">Phase</div><div class="qt">1 ✓</div></div>
+      <div class="roadmap-items">
+        <span class="roadmap-item done">Auth + 2FA</span>
+        <span class="roadmap-item done">Signal Radar</span>
+        <span class="roadmap-item done">Portfolio Tracker</span>
+        <span class="roadmap-item done">Trade Journal</span>
+        <span class="roadmap-item done">Smart Alerts</span>
+        <span class="roadmap-item done">On-Chain Analytics</span>
+        <span class="roadmap-item done">PSX + PKR Markets</span>
+        <span class="roadmap-item done">Backtester</span>
+      </div>
+    </div>
+    <div class="roadmap-row">
+      <div class="roadmap-phase"><div class="ph">Phase</div><div class="qt">2 →</div></div>
+      <div class="roadmap-items">
+        <span class="roadmap-item">Admin UI</span>
+        <span class="roadmap-item">Onboarding Flow</span>
+        <span class="roadmap-item">Redis Sessions</span>
+        <span class="roadmap-item">API Key Encryption</span>
+        <span class="roadmap-item">Unit Tests (70%+)</span>
+        <span class="roadmap-item">Monitoring (Sentry)</span>
+      </div>
+    </div>
+    <div class="roadmap-row">
+      <div class="roadmap-phase"><div class="ph">Phase</div><div class="qt">3 ◇</div></div>
+      <div class="roadmap-items">
+        <span class="roadmap-item">Mobile App</span>
+        <span class="roadmap-item">White-label SaaS</span>
+        <span class="roadmap-item">Institutional API</span>
+        <span class="roadmap-item">Real On-Chain Data</span>
+        <span class="roadmap-item">Polymarket Trading</span>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ═══ SLIDE 10: RISKS ═══ -->
+<section class="slide">
+  <div class="slide-num">10 / 12</div>
+  <div class="slide-inner">
+    <div class="slide-label">Risks & Mitigations</div>
+    <div class="slide-title">Eyes open on every risk.<br/>Mitigations already in motion.</div>
+    <div class="divider"></div>
+    <div style="display:flex;flex-direction:column;gap:.85rem">
+      <div class="card card-sm" style="display:grid;grid-template-columns:1fr 1fr;gap:1.5rem;align-items:center">
+        <div><div style="font-size:.75rem;color:var(--red);font-weight:700;text-transform:uppercase;margin-bottom:.3rem">Risk</div><div style="font-weight:600;font-size:.9rem">API dependency (Binance, CoinGecko)</div><div style="font-size:.8rem;color:var(--muted)">Free tier rate limits could throttle live data</div></div>
+        <div><div style="font-size:.75rem;color:var(--green);font-weight:700;text-transform:uppercase;margin-bottom:.3rem">Mitigation</div><div style="font-size:.83rem;color:var(--muted)">6-exchange fallback chain + TTL cache + synthetic data with clear labels. Upgrade to paid APIs at scale ($200/mo).</div></div>
+      </div>
+      <div class="card card-sm" style="display:grid;grid-template-columns:1fr 1fr;gap:1.5rem;align-items:center">
+        <div><div style="font-size:.75rem;color:var(--red);font-weight:700;text-transform:uppercase;margin-bottom:.3rem">Risk</div><div style="font-weight:600;font-size:.9rem">Regulatory exposure</div><div style="font-size:.8rem;color:var(--muted)">Misclassified as unregistered broker</div></div>
+        <div><div style="font-size:.75rem;color:var(--green);font-weight:700;text-transform:uppercase;margin-bottom:.3rem">Mitigation</div><div style="font-size:.83rem;color:var(--muted)">Positioned as research & analytics tool. No order routing, no custody, no financial advice. Clear legal disclaimers.</div></div>
+      </div>
+      <div class="card card-sm" style="display:grid;grid-template-columns:1fr 1fr;gap:1.5rem;align-items:center">
+        <div><div style="font-size:.75rem;color:var(--red);font-weight:700;text-transform:uppercase;margin-bottom:.3rem">Risk</div><div style="font-weight:600;font-size:.9rem">Crypto bear market churn</div><div style="font-size:.8rem;color:var(--muted)">Users drop tools in downturns</div></div>
+        <div><div style="font-size:.75rem;color:var(--green);font-weight:700;text-transform:uppercase;margin-bottom:.3rem">Mitigation</div><div style="font-size:.83rem;color:var(--muted)">Free tier keeps users engaged. Education (Academy) + DCA content optimised for accumulation mindset. Macro/FRED data is bear-market relevant.</div></div>
+      </div>
+      <div class="card card-sm" style="display:grid;grid-template-columns:1fr 1fr;gap:1.5rem;align-items:center">
+        <div><div style="font-size:.75rem;color:var(--red);font-weight:700;text-transform:uppercase;margin-bottom:.3rem">Risk</div><div style="font-weight:600;font-size:.9rem">Scaling SQLite beyond 10k users</div><div style="font-size:.8rem;color:var(--muted)">Single-process SQLite is not horizontally scalable</div></div>
+        <div><div style="font-size:.75rem;color:var(--green);font-weight:700;text-transform:uppercase;margin-bottom:.3rem">Mitigation</div><div style="font-size:.83rem;color:var(--muted)">Migration path defined: Redis sessions → PostgreSQL (app.db) → TimescaleDB (market.db). Architecture already modular for this swap.</div></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ═══ SLIDE 11: ASK ═══ -->
+<section class="slide" id="ask">
+  <div class="slide-num">11 / 12</div>
+  <div class="slide-inner">
+    <div class="slide-label">The Ask</div>
+    <div class="slide-title">Raising seed round to<br/>accelerate to $1M ARR</div>
+    <div class="divider"></div>
+    <div class="grid-2" style="margin-bottom:1.5rem">
+      <div>
+        <div class="ask-highlight">$500K</div>
+        <div style="font-size:.95rem;color:var(--muted);margin-bottom:2rem">Seed Round — 18-month runway at current burn rate</div>
+        <div style="display:flex;flex-direction:column;gap:.75rem">
+          <div class="use-item">
+            <div style="font-size:.85rem;font-weight:600">Engineering (2 hires)</div>
+            <div style="font-size:.85rem;color:var(--accent);font-weight:700">$200K</div>
+            <div class="bar-wrap"><div class="bar" style="width:40%;background:var(--accent)"></div></div>
+          </div>
+          <div class="use-item">
+            <div style="font-size:.85rem;font-weight:600">Growth & Marketing</div>
+            <div style="font-size:.85rem;color:var(--cyan);font-weight:700">$120K</div>
+            <div class="bar-wrap"><div class="bar" style="width:24%;background:var(--cyan)"></div></div>
+          </div>
+          <div class="use-item">
+            <div style="font-size:.85rem;font-weight:600">Infrastructure & APIs</div>
+            <div style="font-size:.85rem;color:var(--green);font-weight:700">$80K</div>
+            <div class="bar-wrap"><div class="bar" style="width:16%;background:var(--green)"></div></div>
+          </div>
+          <div class="use-item">
+            <div style="font-size:.85rem;font-weight:600">Legal & Compliance</div>
+            <div style="font-size:.85rem;color:#f59e0b;font-weight:700">$60K</div>
+            <div class="bar-wrap"><div class="bar" style="width:12%;background:#f59e0b"></div></div>
+          </div>
+          <div class="use-item">
+            <div style="font-size:.85rem;font-weight:600">Reserve</div>
+            <div style="font-size:.85rem;color:var(--muted);font-weight:700">$40K</div>
+            <div class="bar-wrap"><div class="bar" style="width:8%;background:var(--muted)"></div></div>
+          </div>
+        </div>
+      </div>
+      <div style="display:flex;flex-direction:column;gap:1rem">
+        <div class="card">
+          <div style="font-size:.75rem;font-weight:700;text-transform:uppercase;letter-spacing:.1em;color:var(--muted);margin-bottom:1rem">Deal Terms</div>
+          <div class="fin-row"><div class="fin-label">Round size</div><div class="fin-val">$500,000</div></div>
+          <div class="fin-row"><div class="fin-label">Instrument</div><div class="fin-val">SAFE / Convertible Note</div></div>
+          <div class="fin-row"><div class="fin-label">Pre-money valuation</div><div class="fin-val accent">$3.5M</div></div>
+          <div class="fin-row"><div class="fin-label">Equity offered</div><div class="fin-val">12.5%</div></div>
+          <div class="fin-row"><div class="fin-label">Runway</div><div class="fin-val">18 months</div></div>
+        </div>
+        <div class="card">
+          <div style="font-size:.75rem;font-weight:700;text-transform:uppercase;letter-spacing:.1em;color:var(--muted);margin-bottom:1rem">Milestones Unlocked by Raise</div>
+          <div style="display:flex;flex-direction:column;gap:.5rem;font-size:.83rem;color:var(--muted)">
+            <div><span style="color:var(--green)">→</span> Launch waitlist → 2,000 free users in 90 days</div>
+            <div><span style="color:var(--green)">→</span> 400 Pro subscribers ($8K MRR) by Month 6</div>
+            <div><span style="color:var(--green)">→</span> Mobile app beta (React Native) by Month 9</div>
+            <div><span style="color:var(--green)">→</span> $50K MRR / $600K ARR by Month 18</div>
+            <div><span style="color:var(--green)">→</span> Series A ready at $1M+ ARR</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ═══ SLIDE 12: CTA ═══ -->
+<section class="slide cta-slide">
+  <div class="grid-bg"></div>
+  <div class="slide-num">12 / 12</div>
+  <div class="slide-inner" style="text-align:center">
+    <div class="logo" style="justify-content:center;margin-bottom:2rem">⬡ TRADERPRO</div>
+    <h2>The Bloomberg Terminal<br/>for the 99%.</h2>
+    <p>One platform. Every tool. $20/month. Ready to ship today.</p>
+    <a class="btn" href="mailto:hello@traderpro.app">Schedule a Demo →</a>
+    <div style="margin-top:3rem;display:flex;justify-content:center;gap:3rem;flex-wrap:wrap">
+      <div style="text-align:center"><div style="font-size:1.5rem;font-weight:900;color:var(--accent)">$20/mo</div><div style="font-size:.75rem;color:var(--muted)">Pro plan</div></div>
+      <div style="text-align:center"><div style="font-size:1.5rem;font-weight:900;color:var(--cyan)">40+ features</div><div style="font-size:.75rem;color:var(--muted)">shipped & live</div></div>
+      <div style="text-align:center"><div style="font-size:1.5rem;font-weight:900;color:var(--green)">$3.5M</div><div style="font-size:.75rem;color:var(--muted)">pre-money valuation</div></div>
+      <div style="text-align:center"><div style="font-size:1.5rem;font-weight:900;color:#f59e0b">87%</div><div style="font-size:.75rem;color:var(--muted)">cheaper than alternatives</div></div>
+    </div>
+  </div>
+</section>
+
+</body>
+</html>

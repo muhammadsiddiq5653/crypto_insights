@@ -1,9 +1,111 @@
-// Chart Manager for displaying price charts with Chart.js
+// Chart Manager — lightweight-charts candlestick (primary) + Chart.js line (fallback)
 
-let priceChart = null;
+let lwChart = null;
+let lwCandleSeries = null;
+let lwVolumeSeries = null;
+let lwChartContainer = null;
+
+let priceChart = null; // Chart.js fallback
 let currentTimeframe = '7';
 
-// Initialize chart
+// ── LIGHTWEIGHT-CHARTS (candlestick) ─────────────────────────────────
+
+function initLwChart(containerId) {
+    const container = document.getElementById(containerId);
+    if (!container || typeof LightweightCharts === 'undefined') return false;
+
+    lwChartContainer = container;
+    container.innerHTML = '';
+
+    const chartHeight = container.clientHeight || 340;
+
+    lwChart = LightweightCharts.createChart(container, {
+        width: container.clientWidth,
+        height: chartHeight,
+        layout: {
+            background: { color: 'transparent' },
+            textColor: '#6b7394',
+        },
+        grid: {
+            vertLines: { color: 'rgba(102, 126, 234, 0.08)' },
+            horzLines: { color: 'rgba(102, 126, 234, 0.08)' },
+        },
+        crosshair: {
+            mode: LightweightCharts.CrosshairMode.Normal,
+        },
+        rightPriceScale: {
+            borderColor: 'rgba(102, 126, 234, 0.2)',
+            scaleMargins: { top: 0.08, bottom: 0.25 },
+        },
+        timeScale: {
+            borderColor: 'rgba(102, 126, 234, 0.2)',
+            timeVisible: true,
+            secondsVisible: false,
+        },
+        handleScroll: true,
+        handleScale: true,
+    });
+
+    lwCandleSeries = lwChart.addCandlestickSeries({
+        upColor: '#26a69a',
+        downColor: '#ef5350',
+        borderVisible: false,
+        wickUpColor: '#26a69a',
+        wickDownColor: '#ef5350',
+    });
+
+    lwVolumeSeries = lwChart.addHistogramSeries({
+        color: 'rgba(102, 126, 234, 0.3)',
+        priceFormat: { type: 'volume' },
+        priceScaleId: 'volume',
+        scaleMargins: { top: 0.8, bottom: 0 },
+    });
+    lwChart.priceScale('volume').applyOptions({ scaleMargins: { top: 0.8, bottom: 0 } });
+
+    // Resize observer
+    const ro = new ResizeObserver(() => {
+        if (lwChart && lwChartContainer) {
+            lwChart.applyOptions({ width: lwChartContainer.clientWidth });
+        }
+    });
+    ro.observe(container);
+
+    return true;
+}
+
+function updateLwChart(ohlcvData) {
+    if (!lwCandleSeries || !ohlcvData || !ohlcvData.length) return;
+
+    const candles = ohlcvData.map(d => ({
+        time: Math.floor(d.time / 1000),
+        open:  d.open,
+        high:  d.high,
+        low:   d.low,
+        close: d.close,
+    })).sort((a, b) => a.time - b.time);
+
+    const volumes = ohlcvData.map(d => ({
+        time:  Math.floor(d.time / 1000),
+        value: d.volume || 0,
+        color: d.close >= d.open ? 'rgba(38,166,154,0.4)' : 'rgba(239,83,80,0.3)',
+    })).sort((a, b) => a.time - b.time);
+
+    lwCandleSeries.setData(candles);
+    lwVolumeSeries.setData(volumes);
+    lwChart.timeScale().fitContent();
+}
+
+function destroyLwChart() {
+    if (lwChart) {
+        lwChart.remove();
+        lwChart = null;
+        lwCandleSeries = null;
+        lwVolumeSeries = null;
+    }
+}
+
+// ── CHART.JS LINE CHART (fallback / portfolio views) ─────────────────
+
 function initChart(canvasId) {
     const ctx = document.getElementById(canvasId);
     if (!ctx) return null;
@@ -30,14 +132,9 @@ function initChart(canvasId) {
         options: {
             responsive: true,
             maintainAspectRatio: false,
-            interaction: {
-                intersect: false,
-                mode: 'index'
-            },
+            interaction: { intersect: false, mode: 'index' },
             plugins: {
-                legend: {
-                    display: false
-                },
+                legend: { display: false },
                 tooltip: {
                     backgroundColor: '#1e2442',
                     titleColor: '#e4e7f1',
@@ -47,51 +144,27 @@ function initChart(canvasId) {
                     padding: 12,
                     displayColors: false,
                     callbacks: {
-                        label: function (context) {
-                            return 'Price: ' + formatCurrency(context.parsed.y);
-                        },
-                        title: function (context) {
-                            return formatDateTime(context[0].parsed.x);
-                        }
+                        label: ctx => 'Price: ' + formatCurrency(ctx.parsed.y),
+                        title: ctx => formatDateTime(ctx[0].parsed.x),
                     }
                 }
             },
             scales: {
                 x: {
                     type: 'time',
-                    time: {
-                        unit: 'day',
-                        displayFormats: {
-                            day: 'MMM d'
-                        }
-                    },
-                    grid: {
-                        color: 'rgba(102, 126, 234, 0.1)',
-                        drawBorder: false
-                    },
-                    ticks: {
-                        color: '#6b7394',
-                        maxRotation: 0
-                    }
+                    time: { unit: 'day', displayFormats: { day: 'MMM d' } },
+                    grid: { color: 'rgba(102, 126, 234, 0.1)', drawBorder: false },
+                    ticks: { color: '#6b7394', maxRotation: 0 }
                 },
                 y: {
-                    grid: {
-                        color: 'rgba(102, 126, 234, 0.1)',
-                        drawBorder: false
-                    },
-                    ticks: {
-                        color: '#6b7394',
-                        callback: function (value) {
-                            return formatCurrency(value);
-                        }
-                    }
+                    grid: { color: 'rgba(102, 126, 234, 0.1)', drawBorder: false },
+                    ticks: { color: '#6b7394', callback: v => formatCurrency(v) }
                 }
             }
         }
     });
 }
 
-// Update chart with new data
 function updateChart(chart, historicalData) {
     if (!chart || !historicalData || !historicalData.prices) return;
 
@@ -101,62 +174,72 @@ function updateChart(chart, historicalData) {
     chart.data.labels = labels;
     chart.data.datasets[0].data = prices;
 
-    // Update time unit based on data range
-    const daysDiff = (labels[labels.length - 1] - labels[0]) / (1000 * 60 * 60 * 24);
-    if (daysDiff <= 1) {
-        chart.options.scales.x.time.unit = 'hour';
-    } else if (daysDiff <= 7) {
-        chart.options.scales.x.time.unit = 'day';
-    } else if (daysDiff <= 30) {
-        chart.options.scales.x.time.unit = 'day';
-    } else {
-        chart.options.scales.x.time.unit = 'week';
-    }
+    const daysDiff = (labels[labels.length - 1] - labels[0]) / 86400000;
+    chart.options.scales.x.time.unit = daysDiff <= 1 ? 'hour' : daysDiff <= 60 ? 'day' : 'week';
 
-    chart.update('none'); // Update without animation for better performance
+    chart.update('none');
 }
 
-// Create chart container HTML
+// ── SHARED CONTAINER HTML ─────────────────────────────────────────────
+
 function createChartContainer(symbol) {
     return `
     <div class="chart-container">
       <div class="chart-header">
         <h3 class="chart-title">${symbol} Price Chart</h3>
+        <div class="chart-type-toggle" style="display:flex;gap:6px;align-items:center;">
+          <button class="timeframe-btn chart-type-btn active" data-type="candle" title="Candlestick">🕯</button>
+          <button class="timeframe-btn chart-type-btn" data-type="line" title="Line">📈</button>
+        </div>
         <div class="timeframe-buttons">
-          <button class="timeframe-btn ${currentTimeframe === '1' ? 'active' : ''}" data-days="1">24H</button>
-          <button class="timeframe-btn ${currentTimeframe === '7' ? 'active' : ''}" data-days="7">7D</button>
+          <button class="timeframe-btn ${currentTimeframe === '1'  ? 'active' : ''}" data-days="1">24H</button>
+          <button class="timeframe-btn ${currentTimeframe === '7'  ? 'active' : ''}" data-days="7">7D</button>
           <button class="timeframe-btn ${currentTimeframe === '30' ? 'active' : ''}" data-days="30">30D</button>
           <button class="timeframe-btn ${currentTimeframe === '90' ? 'active' : ''}" data-days="90">90D</button>
         </div>
       </div>
-      <div style="height: 400px; position: relative;">
-        <canvas id="priceChart"></canvas>
-      </div>
+      <div id="lwChartContainer" style="height:340px;position:relative;"></div>
+      <div style="height:340px;position:relative;display:none;"><canvas id="priceChart"></canvas></div>
     </div>
   `;
 }
 
-// Load and display chart for a cryptocurrency
+// ── MAIN LOAD FUNCTION ────────────────────────────────────────────────
+
+let _currentChartSymbol = null;
+let _currentChartType = 'candle'; // 'candle' | 'line'
+
 async function loadChart(symbol, days = 7) {
     currentTimeframe = days.toString();
+    _currentChartSymbol = symbol;
 
     try {
         const historicalData = await apiRequest(`/api/crypto/${symbol}/history?days=${days}`);
 
-        // Destroy existing chart if it exists
-        if (priceChart) {
-            priceChart.destroy();
-            priceChart = null;
-        }
+        destroyLwChart();
+        if (priceChart) { priceChart.destroy(); priceChart = null; }
 
-        // Wait for DOM to update
-        await new Promise(resolve => setTimeout(resolve, 100));
+        await new Promise(r => setTimeout(r, 80));
 
-        // Initialize new chart
-        priceChart = initChart('priceChart');
+        if (_currentChartType === 'candle' && typeof LightweightCharts !== 'undefined') {
+            const lwWrap = document.getElementById('lwChartContainer');
+            const lineWrap = lwWrap && lwWrap.nextElementSibling;
+            if (lwWrap)   lwWrap.style.display = 'block';
+            if (lineWrap) lineWrap.style.display = 'none';
 
-        if (priceChart) {
-            updateChart(priceChart, historicalData);
+            if (initLwChart('lwChartContainer')) {
+                // Convert price-only history to synthetic OHLCV if no OHLCV available
+                const ohlcv = _buildOhlcvFromHistory(historicalData);
+                updateLwChart(ohlcv);
+            }
+        } else {
+            const lwWrap = document.getElementById('lwChartContainer');
+            const lineWrap = lwWrap && lwWrap.nextElementSibling;
+            if (lwWrap)   lwWrap.style.display = 'none';
+            if (lineWrap) lineWrap.style.display = 'block';
+
+            priceChart = initChart('priceChart');
+            if (priceChart) updateChart(priceChart, historicalData);
         }
     } catch (error) {
         console.error('Error loading chart:', error);
@@ -164,19 +247,53 @@ async function loadChart(symbol, days = 7) {
     }
 }
 
-// Setup timeframe button listeners
+// Build synthetic OHLCV bars from price-only history (groups into ~daily bars)
+function _buildOhlcvFromHistory(historicalData) {
+    if (!historicalData || !historicalData.prices) return [];
+
+    const prices = historicalData.prices;
+    if (!prices.length) return [];
+
+    // Group into buckets (target ~100 bars regardless of timeframe)
+    const bucketMs = Math.max(
+        Math.floor((prices[prices.length - 1].timestamp - prices[0].timestamp) / 100),
+        60000
+    );
+
+    const buckets = {};
+    for (const p of prices) {
+        const key = Math.floor(p.timestamp / bucketMs) * bucketMs;
+        if (!buckets[key]) buckets[key] = [];
+        buckets[key].push(p.price);
+    }
+
+    return Object.entries(buckets).map(([ts, pts]) => ({
+        time:   Number(ts),
+        open:   pts[0],
+        high:   Math.max(...pts),
+        low:    Math.min(...pts),
+        close:  pts[pts.length - 1],
+        volume: 0,
+    })).sort((a, b) => a.time - b.time);
+}
+
+// ── BUTTON SETUP ──────────────────────────────────────────────────────
+
 function setupTimeframeButtons(symbol) {
-    const buttons = document.querySelectorAll('.timeframe-btn');
-    buttons.forEach(btn => {
+    document.querySelectorAll('.timeframe-btn[data-days]').forEach(btn => {
         btn.addEventListener('click', async () => {
-            const days = btn.dataset.days;
-
-            // Update active state
-            buttons.forEach(b => b.classList.remove('active'));
+            document.querySelectorAll('.timeframe-btn[data-days]').forEach(b => b.classList.remove('active'));
             btn.classList.add('active');
+            await loadChart(symbol, btn.dataset.days);
+        });
+    });
 
-            // Reload chart
-            await loadChart(symbol, days);
+    document.querySelectorAll('.chart-type-btn').forEach(btn => {
+        btn.addEventListener('click', async () => {
+            document.querySelectorAll('.chart-type-btn').forEach(b => b.classList.remove('active'));
+            btn.classList.add('active');
+            _currentChartType = btn.dataset.type;
+            if (_currentChartSymbol) await loadChart(_currentChartSymbol, currentTimeframe);
         });
     });
 }

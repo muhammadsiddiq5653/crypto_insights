@@ -1,4 +1,5 @@
 const config = require('../config');
+const TI = require('technicalindicators');
 
 // Calculate Simple Moving Average (SMA)
 function calculateSMA(data, period) {
@@ -517,6 +518,112 @@ function detectMACDDivergence(prices) {
     return { type: 'NONE', description: 'No MACD divergence detected.', signal: 'NEUTRAL' };
 }
 
+// ── EXTRA INDICATORS via technicalindicators library ───────────────────
+
+function calculateATR(ohlcvData, period = 14) {
+    if (!ohlcvData || ohlcvData.length < period + 1) return null;
+    const highs  = ohlcvData.map(d => d.high  || d.price);
+    const lows   = ohlcvData.map(d => d.low   || d.price * 0.995);
+    const closes = ohlcvData.map(d => d.close || d.price);
+    try {
+        const result = TI.ATR.calculate({ high: highs, low: lows, close: closes, period });
+        if (!result.length) return null;
+        const atr = result[result.length - 1];
+        const price = closes[closes.length - 1];
+        return {
+            value: atr,
+            pct: (atr / price) * 100,
+            signal: atr / price > 0.04 ? 'HIGH_VOLATILITY' : atr / price < 0.01 ? 'LOW_VOLATILITY' : 'NORMAL',
+        };
+    } catch { return null; }
+}
+
+function calculateStochastic(ohlcvData, period = 14, signalPeriod = 3) {
+    if (!ohlcvData || ohlcvData.length < period + signalPeriod) return null;
+    const highs  = ohlcvData.map(d => d.high  || d.price);
+    const lows   = ohlcvData.map(d => d.low   || d.price * 0.995);
+    const closes = ohlcvData.map(d => d.close || d.price);
+    try {
+        const result = TI.Stochastic.calculate({ high: highs, low: lows, close: closes, period, signalPeriod });
+        if (!result.length) return null;
+        const { k, d } = result[result.length - 1];
+        let signal = 'NEUTRAL';
+        if (k < 20 && d < 20)       signal = 'BUY';
+        else if (k > 80 && d > 80)  signal = 'SELL';
+        else if (k > d && k < 50)   signal = 'BULLISH';
+        else if (k < d && k > 50)   signal = 'BEARISH';
+        return { k: +k.toFixed(2), d: +d.toFixed(2), signal };
+    } catch { return null; }
+}
+
+function calculateWilliamsR(ohlcvData, period = 14) {
+    if (!ohlcvData || ohlcvData.length < period) return null;
+    const highs  = ohlcvData.map(d => d.high  || d.price);
+    const lows   = ohlcvData.map(d => d.low   || d.price * 0.995);
+    const closes = ohlcvData.map(d => d.close || d.price);
+    try {
+        const result = TI.WilliamsR.calculate({ high: highs, low: lows, close: closes, period });
+        if (!result.length) return null;
+        const value = result[result.length - 1];
+        const signal = value <= -80 ? 'BUY' : value >= -20 ? 'SELL' : 'NEUTRAL';
+        return { value: +value.toFixed(2), signal };
+    } catch { return null; }
+}
+
+function calculateADX(ohlcvData, period = 14) {
+    if (!ohlcvData || ohlcvData.length < period * 2) return null;
+    const highs  = ohlcvData.map(d => d.high  || d.price);
+    const lows   = ohlcvData.map(d => d.low   || d.price * 0.995);
+    const closes = ohlcvData.map(d => d.close || d.price);
+    try {
+        const result = TI.ADX.calculate({ high: highs, low: lows, close: closes, period });
+        if (!result.length) return null;
+        const { adx, pdi, mdi } = result[result.length - 1];
+        const trend = adx > 25 ? (pdi > mdi ? 'STRONG_UP' : 'STRONG_DOWN') : 'WEAK';
+        return { adx: +adx.toFixed(2), pdi: +pdi.toFixed(2), mdi: +mdi.toFixed(2), trend };
+    } catch { return null; }
+}
+
+function calculateCCI(ohlcvData, period = 20) {
+    if (!ohlcvData || ohlcvData.length < period) return null;
+    const highs  = ohlcvData.map(d => d.high  || d.price);
+    const lows   = ohlcvData.map(d => d.low   || d.price * 0.995);
+    const closes = ohlcvData.map(d => d.close || d.price);
+    try {
+        const result = TI.CCI.calculate({ high: highs, low: lows, close: closes, period });
+        if (!result.length) return null;
+        const value = result[result.length - 1];
+        const signal = value > 100 ? 'OVERBOUGHT' : value < -100 ? 'OVERSOLD' : 'NEUTRAL';
+        return { value: +value.toFixed(2), signal };
+    } catch { return null; }
+}
+
+function calculateOBV(ohlcvData) {
+    if (!ohlcvData || ohlcvData.length < 10) return null;
+    const closes  = ohlcvData.map(d => d.close || d.price);
+    const volumes = ohlcvData.map(d => d.volume || 0);
+    if (volumes.every(v => v === 0)) return null;
+    try {
+        const result = TI.OBV.calculate({ close: closes, volume: volumes });
+        if (result.length < 5) return null;
+        const recent = result.slice(-5);
+        const trend  = recent[recent.length - 1] > recent[0] ? 'RISING' : 'FALLING';
+        return { value: result[result.length - 1], trend };
+    } catch { return null; }
+}
+
+// ── HELPER: build synthetic OHLCV from price-only history ──────────────
+function _toOhlcv(pricesArray) {
+    return pricesArray.map((p, i) => ({
+        open:   i > 0 ? pricesArray[i - 1] : p,
+        high:   p * 1.005,
+        low:    p * 0.995,
+        close:  p,
+        price:  p,
+        volume: 0,
+    }));
+}
+
 // Main analysis function
 function analyzeData(historicalData) {
     const prices = historicalData.prices.map(p => p.price);
@@ -528,10 +635,26 @@ function analyzeData(historicalData) {
     const movingAverages = calculateMovingAverages(prices);
     const volume = analyzeVolume(volumes);
 
-    // NEW: Candlestick patterns + divergence
     const candlestickPatterns = detectCandlestickPatterns(historicalData.prices);
     const rsiDivergence       = detectRSIDivergence(prices);
     const macdDivergence      = detectMACDDivergence(prices);
+
+    // Extra indicators from technicalindicators library
+    const ohlcvData = historicalData.prices.length
+        ? (historicalData.prices[0].open ? historicalData.prices : _toOhlcv(prices))
+        : [];
+
+    const atr        = calculateATR(ohlcvData);
+    const stochastic = calculateStochastic(ohlcvData);
+    const williamsR  = calculateWilliamsR(ohlcvData);
+    const adx        = calculateADX(ohlcvData);
+    const cci        = calculateCCI(ohlcvData);
+    const obv        = calculateOBV(
+        prices.map((p, i) => ({
+            close: p,
+            volume: volumes && volumes[i] ? volumes[i].volume : 0,
+        }))
+    );
 
     const indicators = {
         rsi,
@@ -541,7 +664,13 @@ function analyzeData(historicalData) {
         volume,
         candlestickPatterns,
         rsiDivergence,
-        macdDivergence
+        macdDivergence,
+        atr,
+        stochastic,
+        williamsR,
+        adx,
+        cci,
+        obv,
     };
 
     const overall = generateOverallSignal(indicators);
@@ -562,5 +691,11 @@ module.exports = {
     calculateMACD,
     calculateBollingerBands,
     calculateMovingAverages,
-    analyzeVolume
+    analyzeVolume,
+    calculateATR,
+    calculateStochastic,
+    calculateWilliamsR,
+    calculateADX,
+    calculateCCI,
+    calculateOBV,
 };

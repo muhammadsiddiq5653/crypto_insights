@@ -7,20 +7,27 @@
     "node": ">=18.0.0"
   },
   "scripts": {
-    "start":        "node server.js",
-    "dev":          "NODE_ENV=development nodemon server.js",
-    "prod":         "NODE_ENV=production node server.js",
-    "pm2:start":    "pm2 start ecosystem.config.js --env production",
-    "pm2:stop":     "pm2 stop traderpro",
-    "pm2:restart":  "pm2 reload traderpro",
-    "pm2:logs":     "pm2 logs traderpro",
-    "pm2:monit":    "pm2 monit",
-    "db:migrate":   "node -e \"require('./services/db').initTables()\" && echo 'DB tables OK'",
-    "health":       "curl -s http://localhost:3000/health | node -e \"process.stdin.resume();let d='';process.stdin.on('data',c=>d+=c);process.stdin.on('end',()=>console.log(JSON.stringify(JSON.parse(d),null,2)))\""
+    "start": "node server.js",
+    "dev": "NODE_ENV=development nodemon server.js",
+    "prod": "NODE_ENV=production node server.js",
+    "pm2:start": "pm2 start ecosystem.config.js --env production",
+    "pm2:stop": "pm2 stop traderpro",
+    "pm2:restart": "pm2 reload traderpro",
+    "pm2:logs": "pm2 logs traderpro",
+    "pm2:monit": "pm2 monit",
+    "db:migrate": "node -e \"require('./services/db').initTables()\" && echo 'DB tables OK'",
+    "health": "curl -s http://localhost:3000/health | node -e \"process.stdin.resume();let d='';process.stdin.on('data',c=>d+=c);process.stdin.on('end',()=>console.log(JSON.stringify(JSON.parse(d),null,2)))\""
   },
   "keywords": [
-    "crypto", "trading", "bitcoin", "ethereum", "signals",
-    "technical-analysis", "polymarket", "kelly", "position-sizer"
+    "crypto",
+    "trading",
+    "bitcoin",
+    "ethereum",
+    "signals",
+    "technical-analysis",
+    "polymarket",
+    "kelly",
+    "position-sizer"
   ],
   "author": "",
   "license": "MIT",
@@ -28,6 +35,7 @@
     "axios": "^1.6.2",
     "bcryptjs": "^3.0.3",
     "better-sqlite3": "^12.8.0",
+    "ccxws": "^0.47.0",
     "compression": "^1.8.1",
     "connect-sqlite3": "^0.9.16",
     "cookie-parser": "^1.4.7",
@@ -37,8 +45,13 @@
     "express-rate-limit": "^8.3.2",
     "express-session": "^1.19.0",
     "helmet": "^8.1.0",
+    "nodemailer": "^8.0.7",
+    "qrcode": "^1.5.4",
     "rss-parser": "^3.13.0",
-    "session-file-store": "^1.5.0"
+    "session-file-store": "^1.5.0",
+    "speakeasy": "^2.0.0",
+    "stripe": "^22.1.1",
+    "technicalindicators": "^3.1.0"
   },
   "devDependencies": {
     "nodemon": "^3.0.2"

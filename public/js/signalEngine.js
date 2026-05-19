@@ -49,8 +49,8 @@ function calculateTradeSignal(analysis, price, assetType = 'crypto') {
     // MA
     if (mas.above200MA === true)  { bullish++; total++; reasons.push('Price above 200 MA — long-term uptrend'); }
     if (mas.above200MA === false) { bearish++; total++; reasons.push('Price below 200 MA — long-term downtrend'); }
-    if (mas.above50MA === true)   { bullish++; total++; }
-    if (mas.above50MA === false)  { bearish++; total++; }
+    if (mas.above50MA === true)   { bullish++; total++; reasons.push('Price above 50 MA — medium-term uptrend'); }
+    if (mas.above50MA === false)  { bearish++; total++; reasons.push('Price below 50 MA — medium-term downtrend'); }
 
     // Volume
     if (vol.ratio > 2) {
@@ -82,11 +82,15 @@ function calculateTradeSignal(analysis, price, assetType = 'crypto') {
 
     const netScore = bullish - bearish;
     const maxScore = Math.max(bullish, bearish, 1);
-    const strength = Math.min(99, Math.round((maxScore / (total || 1)) * 100));
+    // Blend signal dominance (direction quality) with signal breadth (how many factors fired)
+    const dominance = maxScore / (total || 1);           // 0–1: how one-sided the score is
+    const breadth   = Math.min(1, total / 8);            // 0–1: caps at 8 active factors
+    const strength  = Math.min(99, Math.round((dominance * 0.6 + breadth * 0.4) * 100));
 
+    // Require net ≥3 so a lone divergence (+2) alone can't fire a directional signal
     let direction = 'NEUTRAL';
-    if (netScore >= 2) direction = 'LONG';
-    else if (netScore <= -2) direction = 'SHORT';
+    if (netScore >= 3) direction = 'LONG';
+    else if (netScore <= -3) direction = 'SHORT';
 
     if (direction === 'NEUTRAL') {
         return { direction:'NEUTRAL', strength, confidence: strength,
@@ -170,7 +174,6 @@ function renderSignalCard(signal, coinName, symbol) {
     }).join('');
 
     const signalId = 'sig_' + Date.now();
-    const tpJSON   = JSON.stringify(signal.takeProfits || []).replace(/"/g, "'");
 
     return '<div class="signal-card ' + dirClass + '" id="' + signalId + '">' +
         '<div class="signal-card-header">' +
@@ -199,8 +202,8 @@ function renderSignalCard(signal, coinName, symbol) {
         '<div class="pos-sizer" id="posSizer_' + signalId + '">' +
             '<div class="pos-sizer-title">💰 Position Size Calculator</div>' +
             '<div class="pos-sizer-inputs">' +
-                '<div class="ps-input-group"><label>Account Balance ($)</label><input type="number" class="ps-input" id="psBalance_' + signalId + '" placeholder="10000" value="10000" oninput="calcPositionSize(\'' + signalId + '\',' + signal.entry + ',' + signal.stopLoss + ')"></div>' +
-                '<div class="ps-input-group"><label>Risk per Trade (%)</label><input type="number" class="ps-input" id="psRisk_' + signalId + '" placeholder="1" value="1" min="0.1" max="10" step="0.1" oninput="calcPositionSize(\'' + signalId + '\',' + signal.entry + ',' + signal.stopLoss + ')"></div>' +
+                '<div class="ps-input-group"><label>Account Balance ($)</label><input type="number" class="ps-input" id="psBalance_' + signalId + '" placeholder="10000" value="10000" data-sig="' + signalId + '" data-entry="' + signal.entry + '" data-sl="' + signal.stopLoss + '" oninput="calcPositionSize(this.dataset.sig,+this.dataset.entry,+this.dataset.sl)"></div>' +
+                '<div class="ps-input-group"><label>Risk per Trade (%)</label><input type="number" class="ps-input" id="psRisk_' + signalId + '" placeholder="1" value="1" min="0.1" max="10" step="0.1" data-sig="' + signalId + '" data-entry="' + signal.entry + '" data-sl="' + signal.stopLoss + '" oninput="calcPositionSize(this.dataset.sig,+this.dataset.entry,+this.dataset.sl)"></div>' +
             '</div>' +
             '<div class="ps-results" id="psResults_' + signalId + '">' +
                 '<div class="ps-result-item"><span>$ at Risk</span><strong id="psAtRisk_' + signalId + '">—</strong></div>' +
@@ -223,7 +226,7 @@ function renderSignalCard(signal, coinName, symbol) {
             '<span class="sig-ind">MA200: <strong class="' + (signal.aboveMA200 === true ? 'positive' : signal.aboveMA200 === false ? 'negative' : '') + '">' + (signal.aboveMA200 === true ? 'Above ↑' : signal.aboveMA200 === false ? 'Below ↓' : '—') + '</strong></span>' +
         '</div>' +
 
-        (!isNeutral ? '<div class="signal-log-row"><button class="signal-log-btn" onclick="logSignalToHistory(\'' + escapeHtml(symbol) + '\',\'' + escapeHtml(coinName) + '\',\'' + signal.direction + '\',' + signal.entry + ',' + signal.stopLoss + ',' + JSON.stringify(signal.takeProfits||[]) + ')">📓 Log to Signal History</button></div>' : '') +
+        (!isNeutral ? '<div class="signal-log-row"><button class="signal-log-btn" data-log-symbol="' + escapeHtml(symbol) + '" data-log-name="' + escapeHtml(coinName) + '" data-log-dir="' + signal.direction + '" data-log-entry="' + signal.entry + '" data-log-sl="' + signal.stopLoss + '" data-log-tps="' + escapeHtml(JSON.stringify(signal.takeProfits||[])) + '" onclick="logSignalFromBtn(this)">📓 Log to Signal History</button></div>' : '') +
 
         '<div class="signal-disclaimer">⚠️ <strong>Not financial advice.</strong> Signals are auto-generated from technical indicators only. Always do your own research.</div>' +
     '</div>';
@@ -310,11 +313,23 @@ function calcStandalonePosition() {
 
 // ── SIGNAL HISTORY & WIN RATE ──────────────────────────────────────────
 
+// Safe bridge for log button — reads signal data from data-* attributes, no inline JSON injection
+function logSignalFromBtn(btn) {
+    try {
+        var tps = JSON.parse(btn.dataset.logTps || '[]');
+        logSignalToHistory(btn.dataset.logSymbol, btn.dataset.logName,
+            btn.dataset.logDir, +btn.dataset.logEntry, +btn.dataset.logSl, tps);
+    } catch(e) { console.error('logSignalFromBtn parse error', e); }
+}
+
 function logSignalToHistory(symbol, name, direction, entry, stopLoss, takeProfits) {
     var history = JSON.parse(localStorage.getItem(SIGNAL_HISTORY_KEY) || '[]');
     history.unshift({ id: Date.now(), symbol, name, direction, entry, stopLoss, takeProfits,
         timestamp: new Date().toISOString(), outcome: 'OPEN', notes: '' });
-    if (history.length > 100) history.pop();
+    if (history.length > 100) {
+        history = history.slice(0, 100);
+        showToast('⚠️ Signal history limit reached (100). Oldest entries removed.');
+    }
     localStorage.setItem(SIGNAL_HISTORY_KEY, JSON.stringify(history));
     showToast('📓 ' + symbol + ' ' + direction + ' signal logged!');
     if (document.getElementById('signalHistoryTable')) renderSignalHistory();
@@ -397,8 +412,18 @@ function clearSignalHistory() {
 function exportSignalHistoryCSV() {
     var history = JSON.parse(localStorage.getItem(SIGNAL_HISTORY_KEY) || '[]');
     if (!history.length) return;
-    var rows = [['Date','Symbol','Direction','Entry','SL','TP1','TP2','TP3','Outcome','Notes']];
-    history.forEach(function(s){ rows.push([new Date(s.timestamp).toLocaleDateString(), s.symbol, s.direction, s.entry, s.stopLoss, s.takeProfits&&s.takeProfits[0]?s.takeProfits[0].price:'', s.takeProfits&&s.takeProfits[1]?s.takeProfits[1].price:'', s.takeProfits&&s.takeProfits[2]?s.takeProfits[2].price:'', s.outcome, s.notes]); });
+    var csvQ = function(v) { var s = String(v ?? ''); return '"' + s.replace(/"/g, '""') + '"'; };
+    var rows = [['Date','Symbol','Direction','Entry','SL','TP1','TP2','TP3','Outcome','Notes'].map(csvQ)];
+    history.forEach(function(s){
+        rows.push([
+            new Date(s.timestamp).toLocaleDateString(), s.symbol, s.direction,
+            s.entry, s.stopLoss,
+            s.takeProfits&&s.takeProfits[0] ? s.takeProfits[0].price : '',
+            s.takeProfits&&s.takeProfits[1] ? s.takeProfits[1].price : '',
+            s.takeProfits&&s.takeProfits[2] ? s.takeProfits[2].price : '',
+            s.outcome, s.notes||''
+        ].map(csvQ));
+    });
     var a = document.createElement('a');
     a.href = 'data:text/csv;charset=utf-8,' + encodeURIComponent(rows.map(function(r){ return r.join(','); }).join('\n'));
     a.download = 'signal_history.csv'; a.click();
@@ -416,22 +441,48 @@ function showToast(msg) {
 // ── PSX SIGNAL ────────────────────────────────────────────────────────
 
 function generatePSXSignal(stock) {
-    var change = stock.changePercent || 0;
-    var price  = stock.price || stock.lastTrade || 0;
-    var direction = 'NEUTRAL', reasons = [];
+    var change   = stock.changePercent || 0;
+    var volume   = stock.volume || 0;
+    var avgVol   = stock.avgVolume || 0;
+    var price    = stock.price || stock.lastTrade || 0;
+    var high     = stock.high || price;
+    var low      = stock.low  || price;
+    var direction = 'NEUTRAL';
+    var reasons   = [];
+    var confidence = 40;
 
-    if (change > 2)       { direction = 'LONG';  reasons.push('Strong up day: +' + change.toFixed(2) + '%'); }
-    else if (change < -2) { direction = 'SHORT'; reasons.push('Strong down day: ' + change.toFixed(2) + '%'); }
+    if (!price) return { direction:'NEUTRAL', reasons:['Insufficient data for PSX signal'], confidence:40 };
 
-    if (!price || direction === 'NEUTRAL') return { direction:'NEUTRAL', reasons:['Insufficient data for PSX signal'], confidence:40 };
+    // Require both price move AND volume confirmation for a directional signal
+    var volConfirmed = avgVol > 0 && volume > avgVol * 1.5;
+    if (change > 3 && volConfirmed)       { direction = 'LONG';  reasons.push('Strong up day: +' + change.toFixed(2) + '% with ' + (volume/avgVol).toFixed(1) + 'x volume confirmation'); confidence = 65; }
+    else if (change < -3 && volConfirmed) { direction = 'SHORT'; reasons.push('Strong down day: ' + change.toFixed(2) + '% with ' + (volume/avgVol).toFixed(1) + 'x volume confirmation'); confidence = 65; }
+    else if (change > 3)  { direction = 'LONG';  reasons.push('Strong up day: +' + change.toFixed(2) + '% (no volume confirmation — lower confidence)'); confidence = 50; }
+    else if (change < -3) { direction = 'SHORT'; reasons.push('Strong down day: ' + change.toFixed(2) + '% (no volume confirmation — lower confidence)'); confidence = 50; }
+
+    if (direction === 'NEUTRAL') return { direction:'NEUTRAL', reasons:['No clear PSX signal — change ' + change.toFixed(2) + '% is within normal range'], confidence:40 };
 
     var isLong = direction === 'LONG';
-    var sl = isLong ? price * 0.95 : price * 1.05;
-    var tps = isLong ?
-        [{ label:'TP1', price:roundPrice(price*1.05), rr:'1:1' },{ label:'TP2', price:roundPrice(price*1.10), rr:'1:2' },{ label:'TP3', price:roundPrice(price*1.15), rr:'1:3' }] :
-        [{ label:'TP1', price:roundPrice(price*0.95), rr:'1:1' },{ label:'TP2', price:roundPrice(price*0.90), rr:'1:2' },{ label:'TP3', price:roundPrice(price*0.85), rr:'1:3' }];
+    // Use intraday range as ATR proxy; fall back to 2% of price
+    var atr = (high - low) > 0 ? (high - low) : price * 0.02;
+    var sl  = isLong ? roundPrice(price - atr * 1.5) : roundPrice(price + atr * 1.5);
+    var slDist = Math.abs(price - sl);
+    var tps = isLong ? [
+        { label:'TP1 (1R)', price: roundPrice(price + slDist),     rr:'1:1' },
+        { label:'TP2 (2R)', price: roundPrice(price + slDist * 2), rr:'1:2' },
+        { label:'TP3 (3R)', price: roundPrice(price + slDist * 3), rr:'1:3' },
+    ] : [
+        { label:'TP1 (1R)', price: roundPrice(price - slDist),     rr:'1:1' },
+        { label:'TP2 (2R)', price: roundPrice(price - slDist * 2), rr:'1:2' },
+        { label:'TP3 (3R)', price: roundPrice(price - slDist * 3), rr:'1:3' },
+    ];
+
+    var riskPct   = (slDist / price * 100).toFixed(2);
+    var rewardPct = (slDist / price * 100).toFixed(2);
     reasons.push('T+2 settlement — plan exit before settlement');
-    return { direction, confidence:55, strength:55, entry:roundPrice(price), stopLoss:roundPrice(sl), takeProfits:tps, riskPct:'5.00', reward1Pct:'5.00', reasons, assetType:'psx', patterns:{patterns:[]}, rsiDiv:{type:'NONE'}, macdDiv:{type:'NONE'} };
+    return { direction, confidence, strength: confidence, entry: roundPrice(price), stopLoss: sl,
+        takeProfits: tps, riskPct, reward1Pct: rewardPct, reasons, assetType:'psx',
+        patterns:{patterns:[]}, rsiDiv:{type:'NONE'}, macdDiv:{type:'NONE'} };
 }
 
 // ── INJECT SIGNAL INTO ANALYSIS ───────────────────────────────────────
@@ -446,7 +497,18 @@ async function loadAndShowSignal(coinId, symbol, coinName, price) {
         container.innerHTML = renderSignalCard(signal, coinName, symbol);
         var card = container.querySelector('.signal-card');
         if (card && signal.stopLoss) setTimeout(function(){ calcPositionSize(card.id, signal.entry, signal.stopLoss); }, 100);
+
+        // Emit to global signal bus
+        if (typeof SignalBus !== 'undefined' && signal && signal.direction !== 'NEUTRAL') {
+            SignalBus.emit({
+                symbol: symbol, direction: signal.direction,
+                confidence: signal.confidence || signal.strength || 50,
+                source: 'technical', price: price,
+                reasons: (signal.reasons || []).slice(0, 5),
+            });
+        }
     } catch(e) {
+        console.error('[signalEngine] loadAndShowSignal failed:', e);
         container.innerHTML = '<div class="signal-error">Could not generate signal. Try again.</div>';
     }
 }

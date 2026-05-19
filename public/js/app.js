@@ -31,6 +31,9 @@ async function initApp() {
         // Init ticker bar first (non-blocking, shows at top immediately)
         if (typeof initTickerBar === 'function') initTickerBar();
 
+        // Phase 4: Live WebSocket ticker strip
+        if (typeof TickerStrip !== 'undefined') TickerStrip.init();
+
         await loadCryptocurrencies();
         setupNavigation();
         setupMobileNav();
@@ -139,6 +142,13 @@ function switchSection(sectionName) {
             case 'portfolio-analytics': if (typeof initPortfolioAnalytics === 'function') initPortfolioAnalytics(); break;
             case 'smart-alerts':        if (typeof initSmartAlerts === 'function') initSmartAlerts(); break;
             case 'calculator':          if (typeof calcStandalonePosition === 'function') { /* auto-calc on input */ } break;
+            case 'command-center':        if (typeof CommandCenter !== 'undefined' && CommandCenter.init) CommandCenter.init(); break;
+            case 'alert-engine':          if (typeof AlertEngine !== 'undefined' && AlertEngine.init) AlertEngine.init(); break;
+            case 'trade-journal':         if (typeof TradeJournal !== 'undefined' && TradeJournal.init) TradeJournal.init(); break;
+            case 'performance-dashboard': if (typeof PerformanceDashboard !== 'undefined' && PerformanceDashboard.init) PerformanceDashboard.init(); break;
+            case 'backtester':            if (typeof Backtester !== 'undefined' && Backtester.init) Backtester.init(); break;
+            case 'portfolio-tracker':     if (typeof PortfolioTracker !== 'undefined' && PortfolioTracker.init) PortfolioTracker.init(); break;
+            case 'settings':              if (typeof Settings !== 'undefined' && Settings.init) Settings.init(); break;
             case 'ml-predict':          if (typeof MLPredict !== 'undefined' && MLPredict.init) MLPredict.init(); break;
             case 'autotrade':           if (typeof AutoTrade !== 'undefined' && AutoTrade.init) AutoTrade.init(); break;
             case 'onchain-analytics':   if (typeof OnChainAnalytics !== 'undefined' && OnChainAnalytics.init) OnChainAnalytics.init(); break;

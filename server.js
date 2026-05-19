@@ -19,18 +19,66 @@ const globalMarketsService = require('./services/globalMarketsService');
 const exchangeService = require('./services/exchangeService');
 const authService = require('./services/authService');
 const db = require('./services/db');
-const { requireAuth, requireAdmin, requirePlan, optionalAuth } = require('./middleware/requireAuth');
+const { requireAuth, requireAdmin, requireAdminPage, requirePlan, optionalAuth } = require('./middleware/requireAuth');
+const { csrfMiddleware, ensureCsrfToken } = require('./middleware/csrf');
+const emailService  = require('./services/emailService');
+const speakeasy     = require('speakeasy');
+const QRCode        = require('qrcode');
 const dataCollector = require('./services/dataCollector');
 const apiCache      = require('./services/apiCache');
+const billing       = require('./services/billingService');
+const wsFeeds       = require('./services/wsFeeds');
+const { stripeActivatePlan, stripeDeactivatePlan, getUserByStripeCustomer } = require('./services/appDb');
 
 const IS_PROD = process.env.NODE_ENV === 'production';
+
+// Allowed crypto symbols (uppercase, no USDT suffix) — validated on all :symbol routes
+const VALID_SYMBOLS = new Set(
+    (config.cryptocurrencies || []).map(c => (c.symbol || c).toUpperCase().replace('USDT',''))
+);
+function validSymbol(sym) {
+    if (typeof sym !== 'string' || !/^[A-Z0-9]{1,20}$/.test(sym.toUpperCase())) return false;
+    if (VALID_SYMBOLS.size === 0) return true; // no whitelist in config — allow any well-formed symbol
+    return VALID_SYMBOLS.has(sym.toUpperCase());
+}
 const PORT    = parseInt(process.env.PORT || config.port || 3000, 10);
+
+// Safe query-param integer: parseInt can return NaN for non-numeric strings
+function safeInt(val, fallback, max) {
+    const n = parseInt(val, 10);
+    const result = Number.isFinite(n) ? n : fallback;
+    return max !== undefined ? Math.min(result, max) : result;
+}
+
+// ── STARTUP GUARDS ────────────────────────────────────────────────────
+if (!process.env.SESSION_SECRET) {
+    console.error('\n[FATAL] SESSION_SECRET environment variable is not set.');
+    console.error('        Generate one with: node -e "console.log(require(\'crypto\').randomBytes(64).toString(\'hex\'))"');
+    console.error('        Then add it to your .env file.\n');
+    process.exit(1);
+}
+if (IS_PROD && !process.env.ALLOWED_ORIGINS) {
+    console.error('\n[FATAL] ALLOWED_ORIGINS must be set in production to prevent open CORS.');
+    console.error('        Example: ALLOWED_ORIGINS=https://yourdomain.com\n');
+    process.exit(1);
+}
 
 const app = express();
 
 // ── SECURITY HEADERS (Helmet) ─────────────────────────────────────────
 app.use(helmet({
-    contentSecurityPolicy: false, // disabled so CDN scripts (Chart.js, etc.) load
+    contentSecurityPolicy: {
+        directives: {
+            defaultSrc:  ["'self'"],
+            scriptSrc:   ["'self'", "'unsafe-inline'", 'cdn.jsdelivr.net', 'cdnjs.cloudflare.com'],
+            styleSrc:    ["'self'", "'unsafe-inline'", 'fonts.googleapis.com', 'cdnjs.cloudflare.com'],
+            fontSrc:     ["'self'", 'fonts.gstatic.com'],
+            imgSrc:      ["'self'", 'data:', 'https:'],
+            connectSrc:  ["'self'", 'wss:', 'ws:', 'https://api.binance.com', 'https://gamma-api.polymarket.com'],
+            frameSrc:    ["'none'"],
+            objectSrc:   ["'none'"],
+        },
+    },
     crossOriginEmbedderPolicy: false,
 }));
 
@@ -60,9 +108,42 @@ const authLimiter = rateLimit({
     message: { success: false, error: 'Too many login attempts. Please wait 15 minutes.' },
 });
 
+// Tight limiter for admin mutations — prevent abuse of upgrade/suspend
+const adminMutationLimiter = rateLimit({
+    windowMs: 60 * 1000,
+    max: 30,
+    standardHeaders: true,
+    legacyHeaders: false,
+    message: { success: false, error: 'Too many admin actions. Slow down.' },
+});
+
+// Strict limiter for bulk destructive operations — max 5 per minute
+const adminBulkLimiter = rateLimit({
+    windowMs: 60 * 1000,
+    max: 5,
+    standardHeaders: true,
+    legacyHeaders: false,
+    message: { success: false, error: 'Too many bulk operations. Wait before retrying.' },
+});
+
+// Tight limiter for Slack webhook proxy — prevent spam (10 per 10 min per IP)
+const slackLimiter = rateLimit({
+    windowMs: 10 * 60 * 1000,
+    max: 10,
+    standardHeaders: true,
+    legacyHeaders: false,
+    message: { success: false, error: 'Too many Slack notifications sent. Please wait.' },
+});
+
 app.use('/api/', apiLimiter);
-app.use('/api/auth/login',    authLimiter);
-app.use('/api/auth/register', authLimiter);
+app.use('/api/auth/login',             authLimiter);
+app.use('/api/auth/register',          authLimiter);
+app.use('/api/auth/password',          authLimiter);
+app.use('/api/auth/forgot-password',   authLimiter);
+app.use('/api/auth/reset-password',    authLimiter);
+app.use('/api/proxy/slack',            slackLimiter);
+app.use('/api/admin/users/bulk',       adminBulkLimiter);     // must be before the general prefix
+app.use('/api/admin/users',            adminMutationLimiter);
 
 // ── SESSION & AUTH MIDDLEWARE ─────────────────────────────────────────
 
@@ -74,7 +155,7 @@ app.use(session({
         reapInterval: 60 * 60,
         logFn: () => {}
     }),
-    secret: process.env.SESSION_SECRET || 'trader-portal-secret-2024-change-in-production',
+    secret: process.env.SESSION_SECRET,
     resave: false,
     saveUninitialized: false,
     name: 'tp.sid',
@@ -92,7 +173,76 @@ const allowedOrigins = process.env.ALLOWED_ORIGINS
     : true; // allow all in dev
 
 app.use(cors({ origin: allowedOrigins, credentials: true }));
+
+// Stripe webhook — must receive the raw body before any JSON parser touches it
+app.post('/api/billing/webhook',
+  express.raw({ type: 'application/json' }),
+  async (req, res) => {
+    if (!process.env.STRIPE_WEBHOOK_SECRET) {
+      return res.status(500).json({ error: 'Webhook secret not configured' });
+    }
+    let event;
+    try {
+      event = billing.constructWebhookEvent(req.body, req.headers['stripe-signature']);
+    } catch (err) {
+      console.error('[Stripe webhook] signature verification failed:', err.message);
+      return res.status(400).send(`Webhook Error: ${err.message}`);
+    }
+
+    try {
+      switch (event.type) {
+        case 'checkout.session.completed': {
+          const session = event.data.object;
+          const userId  = session.metadata?.userId;
+          if (typeof userId === 'string' && /^\d+$/.test(userId) && session.subscription) {
+            stripeActivatePlan(Number(userId), {
+              customerId:     session.customer,
+              subscriptionId: session.subscription,
+              plan: 'pro',
+            });
+            // Welcome email — fire-and-forget, don't block the webhook response
+            const appDb = require('./services/appDb');
+            const user  = appDb.getUserById(Number(userId));
+            if (user) emailService.sendProWelcome(user.email, user.username).catch(() => {});
+          }
+          break;
+        }
+        case 'customer.subscription.deleted': {
+          const sub  = event.data.object;
+          const user = getUserByStripeCustomer(sub.customer);
+          if (user) stripeDeactivatePlan(user.id);
+          break;
+        }
+        case 'customer.subscription.updated': {
+          const sub  = event.data.object;
+          const user = getUserByStripeCustomer(sub.customer);
+          if (user && sub.status === 'active') {
+            stripeActivatePlan(user.id, {
+              customerId:     sub.customer,
+              subscriptionId: sub.id,
+              plan: 'pro',
+            });
+          } else if (user && ['canceled', 'unpaid', 'past_due'].includes(sub.status)) {
+            stripeDeactivatePlan(user.id);
+          }
+          break;
+        }
+      }
+    } catch (err) {
+      console.error('[Stripe webhook] handler error:', err);
+    }
+
+    res.json({ received: true });
+  }
+);
+
 app.use(express.json({ limit: '1mb' }));
+app.use('/api/', csrfMiddleware); // CSRF check on all mutating API calls
+
+// Gate admin.html before express.static so it requires authentication
+app.get('/admin.html', requireAdminPage, (req, res) => {
+    res.sendFile(path.join(__dirname, 'public', 'admin.html'));
+});
 
 // Serve public pages without authentication
 app.use('/auth.html',    express.static(path.join(__dirname, 'public', 'auth.html')));
@@ -102,6 +252,52 @@ app.use('/js/auth.js',   express.static(path.join(__dirname, 'public', 'js', 'au
 // Serve static assets (CSS, JS, images) without auth
 app.use('/css', express.static(path.join(__dirname, 'public', 'css')));
 app.use('/js', express.static(path.join(__dirname, 'public', 'js')));
+
+// ── Maintenance mode gate ─────────────────────────────────────────────
+// Intercepts non-API, non-public HTML page requests when maintenance_mode=true.
+// Admins and the auth/landing pages are always allowed through.
+app.use((req, res, next) => {
+    // Only gate HTML navigation (not API calls, assets, or public pages)
+    if (req.path.startsWith('/api/')) return next();
+    if (['/auth.html', '/landing.html', '/landing', '/health'].includes(req.path)) return next();
+    if (req.path.startsWith('/css/') || req.path.startsWith('/js/') || req.path.startsWith('/icons/')) return next();
+
+    try {
+        const maintenance = db.getSetting('maintenance_mode');
+        if (maintenance !== 'true') return next();
+    } catch { return next(); }
+
+    // Maintenance is ON — let admins through, block everyone else
+    if (req.session && req.session.userRole === 'admin') return next();
+
+    // API clients get JSON; browser navigations get a simple maintenance page
+    if (req.headers.accept && req.headers.accept.includes('application/json')) {
+        return res.status(503).json({ error: 'Platform is under maintenance. Check back soon.', code: 'MAINTENANCE' });
+    }
+    res.status(503).send(`<!DOCTYPE html>
+<html lang="en">
+<head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>TraderPro — Maintenance</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:#080b14;color:#e2e8f0;min-height:100vh;display:flex;align-items:center;justify-content:center;text-align:center;padding:20px}
+.icon{font-size:56px;margin-bottom:20px}
+h1{font-size:28px;font-weight:700;margin-bottom:12px}
+p{color:#64748b;font-size:15px;max-width:400px;line-height:1.6;margin-bottom:24px}
+a{display:inline-block;padding:10px 24px;background:#6c63ff;color:#fff;border-radius:8px;font-size:14px;font-weight:600;text-decoration:none}
+a:hover{background:#5a52e0}
+</style>
+</head>
+<body>
+<div>
+  <div class="icon">🔧</div>
+  <h1>Under Maintenance</h1>
+  <p>We're making improvements to TraderPro. We'll be back shortly. Thank you for your patience.</p>
+  <a href="/auth.html">Admin Login</a>
+</div>
+</body>
+</html>`);
+});
 
 // All other static files (including index.html) served normally
 app.use(express.static(path.join(__dirname, 'public')));
@@ -122,6 +318,8 @@ app.post('/api/auth/register', async (req, res) => {
         req.session.username = user.username;
         req.session.userRole = user.role;
         req.session.userPlan = user.plan || 'free';
+        // Welcome email — non-blocking, failure does not affect registration
+        emailService.sendWelcome(user.email, user.username).catch(() => {});
         res.json({
             success: true,
             user: { id: user.id, username: user.username, email: user.email, role: user.role, plan: user.plan || 'free' }
@@ -140,11 +338,22 @@ app.post('/api/auth/login', async (req, res) => {
         if (!result.success) {
             return res.status(401).json({ success: false, error: result.error });
         }
-        req.session.userId   = result.user.id;
-        req.session.username = result.user.username;
-        req.session.userRole = result.user.role;
-        req.session.userPlan = result.user.plan || 'free';
-        res.json({ success: true, user: { ...result.user, plan: result.user.plan || 'free' } });
+        // Check 2FA before granting full session
+        const totp = db.getTotpRow(result.user.id);
+        if (totp && totp.totp_enabled) {
+            // Regenerate session ID after successful password check before storing pending state
+            await new Promise((resolve, reject) => req.session.regenerate(err => err ? reject(err) : resolve()));
+            req.session.pendingTotpUserId = result.user.id;
+            return res.json({ success: true, requires2FA: true });
+        }
+        // Regenerate session ID on successful login to prevent session fixation
+        const userData = result.user;
+        await new Promise((resolve, reject) => req.session.regenerate(err => err ? reject(err) : resolve()));
+        req.session.userId   = userData.id;
+        req.session.username = userData.username;
+        req.session.userRole = userData.role;
+        req.session.userPlan = userData.plan || 'free';
+        res.json({ success: true, user: { ...userData, plan: userData.plan || 'free' } });
     } catch (err) {
         console.error('Login error:', err);
         res.status(500).json({ success: false, error: 'Login failed' });
@@ -154,6 +363,7 @@ app.post('/api/auth/login', async (req, res) => {
 // POST /api/auth/logout
 app.post('/api/auth/logout', (req, res) => {
     req.session.destroy((err) => {
+        if (err) console.error('[logout] session destroy error:', err.message);
         res.clearCookie('tp.sid');
         res.json({ success: true });
     });
@@ -181,6 +391,177 @@ app.put('/api/auth/password', requireAuth, async (req, res) => {
     } catch (err) {
         res.status(500).json({ success: false, error: 'Password change failed' });
     }
+});
+
+// GET /api/auth/csrf — return CSRF token for the current session
+app.get('/api/auth/csrf', requireAuth, (req, res) => {
+    res.json({ token: ensureCsrfToken(req) });
+});
+
+// POST /api/auth/forgot-password — generate reset token, send email
+app.post('/api/auth/forgot-password', async (req, res) => {
+    const { email } = req.body || {};
+    const result = await authService.forgotPassword(email);
+    if (!result.token) {
+        // User not found — still return 200 to prevent enumeration
+        return res.json({ success: true });
+    }
+    const emailResult = await emailService.sendPasswordReset(result.email, result.token);
+    if (!IS_PROD && emailResult.devLink) {
+        // Dev mode: return the link so it can be tested without SMTP
+        return res.json({ success: true, _devLink: emailResult.devLink });
+    }
+    res.json({ success: true });
+});
+
+// POST /api/auth/reset-password — consume token, set new password
+app.post('/api/auth/reset-password', async (req, res) => {
+    const { token, password } = req.body || {};
+    const result = await authService.resetPassword(token, password);
+    res.json(result);
+});
+
+// ── 2FA / TOTP routes (all require auth) ─────────────────────────────
+
+// GET /api/auth/2fa/status
+app.get('/api/auth/2fa/status', requireAuth, (req, res) => {
+    const row = db.getTotpRow(req.userId);
+    res.json({ enabled: !!(row && row.totp_enabled) });
+});
+
+// POST /api/auth/2fa/setup — generate secret + QR data URL
+app.post('/api/auth/2fa/setup', requireAuth, async (req, res) => {
+    const user = authService.getProfile(req.userId);
+    const secret = speakeasy.generateSecret({
+        name: `TraderPro (${user.username})`,
+        length: 20,
+    });
+    db.setTotpSecret(req.userId, secret.base32);
+    const qr = await QRCode.toDataURL(secret.otpauth_url);
+    res.json({ secret: secret.base32, qr });
+});
+
+// POST /api/auth/2fa/verify-setup — verify first token and mark 2FA enabled
+app.post('/api/auth/2fa/verify-setup', requireAuth, (req, res) => {
+    const { token } = req.body || {};
+    const row = db.getTotpRow(req.userId);
+    if (!row || !row.totp_secret) return res.status(400).json({ success: false, error: '2FA setup not started' });
+    const valid = speakeasy.totp.verify({
+        secret: row.totp_secret,
+        encoding: 'base32',
+        token: String(token),
+        window: 1,
+    });
+    if (!valid) return res.status(400).json({ success: false, error: 'Invalid code — try again' });
+    db.enableTotp(req.userId);
+    req.session.totpVerified = true;
+    res.json({ success: true });
+});
+
+// POST /api/auth/2fa/validate — called during login when 2FA is required
+app.post('/api/auth/2fa/validate', (req, res) => {
+    const pendingId = req.session.pendingTotpUserId;
+    if (!pendingId) return res.status(400).json({ success: false, error: 'No pending 2FA session' });
+    const { token } = req.body || {};
+    const row = db.getTotpRow(pendingId);
+    if (!row || !row.totp_enabled) return res.status(400).json({ success: false, error: '2FA not enabled' });
+    const valid = speakeasy.totp.verify({
+        secret: row.totp_secret,
+        encoding: 'base32',
+        token: String(token),
+        window: 1,
+    });
+    if (!valid) return res.status(400).json({ success: false, error: 'Invalid code' });
+
+    // Upgrade the session to fully authenticated
+    const user = db.getUserById(pendingId);
+    req.session.userId   = user.id;
+    req.session.userRole = user.role;
+    req.session.totpVerified = true;
+    delete req.session.pendingTotpUserId;
+    db.updateLastLogin(user.id);
+
+    res.json({ success: true, user: authService.getProfile(user.id) });
+});
+
+// POST /api/auth/2fa/disable — disable 2FA (requires password confirmation)
+app.post('/api/auth/2fa/disable', requireAuth, async (req, res) => {
+    const { password } = req.body || {};
+    const userRow = db.getDb().prepare('SELECT * FROM users WHERE id = ?').get(req.userId);
+    if (!userRow) return res.status(401).json({ success: false, error: 'Session invalid' });
+    const match = await require('bcryptjs').compare(password || '', userRow.password_hash);
+    if (!match) return res.status(400).json({ success: false, error: 'Incorrect password' });
+    db.disableTotp(req.userId);
+    req.session.totpVerified = false;
+    res.json({ success: true });
+});
+
+// ── BILLING (Stripe) ─────────────────────────────────────────────────
+
+// POST /api/billing/checkout — create Stripe Checkout session, return redirect URL
+app.post('/api/billing/checkout', requireAuth, async (req, res) => {
+  if (!process.env.STRIPE_SECRET_KEY) {
+    return res.status(503).json({ error: 'Billing not configured on this server' });
+  }
+  try {
+    const appDb = require('./services/appDb');
+    const user  = appDb.getUserById(req.userId);
+    if (!user) return res.status(404).json({ error: 'User not found' });
+    if (user.plan === 'pro') return res.status(400).json({ error: 'Already on Pro plan' });
+
+    const plan = ['monthly', 'annual', 'lifetime'].includes(req.body?.plan) ? req.body.plan : 'annual';
+    const url = await billing.createCheckoutSession(user, plan);
+    res.json({ url });
+  } catch (err) {
+    console.error('[billing/checkout]', err.message);
+    res.status(500).json({ error: 'Failed to create checkout session' });
+  }
+});
+
+// GET /api/billing/portal — redirect to Stripe Customer Portal
+app.get('/api/billing/portal', requireAuth, async (req, res) => {
+  if (!process.env.STRIPE_SECRET_KEY) {
+    return res.status(503).json({ error: 'Billing not configured on this server' });
+  }
+  try {
+    const appDb = require('./services/appDb');
+    const user  = appDb.getUserById(req.userId);
+    if (!user?.stripe_customer_id) {
+      return res.status(400).json({ error: 'No active subscription found' });
+    }
+    const url = await billing.createPortalSession(user.stripe_customer_id);
+    res.redirect(url);
+  } catch (err) {
+    console.error('[billing/portal]', err.message);
+    res.status(500).json({ error: 'Failed to create portal session' });
+  }
+});
+
+// GET /billing/success — post-checkout landing page (redirects to app)
+app.get('/billing/success', (req, res) => {
+  res.send(`<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>Welcome to Pro — TraderPro</title>
+  <meta http-equiv="refresh" content="3;url=/">
+  <style>
+    body { font-family: system-ui, sans-serif; background: #0d1117; color: #e8eaf0;
+           display: flex; align-items: center; justify-content: center; height: 100vh; margin: 0; }
+    .box { text-align: center; max-width: 400px; padding: 2rem; }
+    h1 { font-size: 2rem; margin-bottom: 0.5rem; }
+    p  { color: #8892a4; }
+    a  { color: #a5b4fc; }
+  </style>
+</head>
+<body>
+  <div class="box">
+    <h1>🚀 You're Pro!</h1>
+    <p>Your subscription is active. Redirecting you to the app…</p>
+    <p><a href="/">Click here if you're not redirected</a></p>
+  </div>
+</body>
+</html>`);
 });
 
 // ── WAITLIST (public — no auth required) ─────────────────────────────
@@ -211,47 +592,52 @@ app.get('/api/waitlist', requireAdmin, (req, res) => {
 
 // GET /api/db/prices/:symbol — historical prices from local DB
 app.get('/api/db/prices/:symbol', requireAuth, (req, res) => {
-    const { symbol } = req.params;
-    const hours = parseInt(req.query.hours || '24');
-    const data = db.getPriceHistory(symbol.toUpperCase() + 'USDT', hours);
-    res.json({ success: true, data, symbol, hours });
+    const sym = req.params.symbol.toUpperCase().replace('USDT','');
+    if (!validSymbol(sym)) return res.status(400).json({ success: false, error: 'Invalid symbol' });
+    const hours = safeInt(req.query.hours, 24, 8760);
+    const data = db.getPriceHistory(sym + 'USDT', hours);
+    res.json({ success: true, data, symbol: sym, hours });
 });
 
 // GET /api/db/prices/:symbol/stats
 app.get('/api/db/prices/:symbol/stats', requireAuth, (req, res) => {
-    const { symbol } = req.params;
-    const days = parseInt(req.query.days || '30');
-    const stats = db.getPriceStats(symbol.toUpperCase() + 'USDT', days);
-    res.json({ success: true, stats, symbol, days });
+    const sym = req.params.symbol.toUpperCase().replace('USDT','');
+    if (!validSymbol(sym)) return res.status(400).json({ success: false, error: 'Invalid symbol' });
+    const days = safeInt(req.query.days, 30, 365);
+    const stats = db.getPriceStats(sym + 'USDT', days);
+    res.json({ success: true, stats, symbol: sym, days });
 });
 
 // GET /api/db/arbitrage/:symbol
 app.get('/api/db/arbitrage/:symbol', requireAuth, (req, res) => {
-    const { symbol } = req.params;
-    const hours = parseInt(req.query.hours || '24');
-    const data = db.getArbitrageHistory(symbol.toUpperCase(), hours);
+    const sym = req.params.symbol.toUpperCase().replace('USDT','');
+    if (!validSymbol(sym)) return res.status(400).json({ success: false, error: 'Invalid symbol' });
+    const hours = safeInt(req.query.hours, 24, 8760);
+    const data = db.getArbitrageHistory(sym, hours);
     res.json({ success: true, data });
 });
 
 // GET /api/db/onchain/:symbol
 app.get('/api/db/onchain/:symbol', requireAuth, (req, res) => {
-    const { symbol } = req.params;
-    const days = parseInt(req.query.days || '30');
-    const data = db.getOnchainHistory(symbol.toUpperCase(), days);
+    const sym = req.params.symbol.toUpperCase().replace('USDT','');
+    if (!validSymbol(sym)) return res.status(400).json({ success: false, error: 'Invalid symbol' });
+    const days = safeInt(req.query.days, 30, 365);
+    const data = db.getOnchainHistory(sym, days);
     res.json({ success: true, data });
 });
 
 // GET /api/db/signals/:symbol
 app.get('/api/db/signals/:symbol', requireAuth, (req, res) => {
-    const { symbol } = req.params;
-    const limit = parseInt(req.query.limit || '20');
-    const data = db.getRecentSignals(symbol.toUpperCase() + 'USDT', limit);
+    const sym = req.params.symbol.toUpperCase().replace('USDT','');
+    if (!validSymbol(sym)) return res.status(400).json({ success: false, error: 'Invalid symbol' });
+    const limit = safeInt(req.query.limit, 20);
+    const data = db.getRecentSignals(sym + 'USDT', limit);
     res.json({ success: true, data });
 });
 
 // GET /api/db/news
 app.get('/api/db/news', requireAuth, (req, res) => {
-    const limit = parseInt(req.query.limit || '50');
+    const limit = safeInt(req.query.limit, 50);
     const data = db.getRecentNews(limit);
     res.json({ success: true, data });
 });
@@ -281,7 +667,7 @@ app.post('/api/db/portfolio/save', requireAuth, (req, res) => {
 
 // GET /api/db/portfolio/history
 app.get('/api/db/portfolio/history', requireAuth, (req, res) => {
-    const days = parseInt(req.query.days || '30');
+    const days = safeInt(req.query.days, 30, 365);
     const data = db.getPortfolioHistory(req.userId, days);
     res.json({ success: true, data });
 });
@@ -318,7 +704,7 @@ app.get('/api/crypto/search', async (req, res) => {
 // Top coins by market cap up to 250  (MUST be before /api/crypto/:symbol)
 app.get('/api/crypto/top', async (req, res) => {
     try {
-        const coins = await exchangeService.getTopCoins(parseInt(req.query.limit) || 100, req.query.currency || 'usd');
+        const coins = await exchangeService.getTopCoins(safeInt(req.query.limit, 100, 500), req.query.currency || 'usd');
         res.json({ success: true, data: coins });
     } catch (error) {
         console.error('Top coins error:', error.message);
@@ -570,14 +956,15 @@ app.get('/api/psx/indices', async (req, res) => {
         const baseKmi = 52400 + Math.round((Math.random() - 0.5) * 400);
         res.json({
             success: true,
+            synthetic: true,  // always flag synthetic data so clients can warn users
             data: [
-                { name: 'KSE-100', current: baseKse, change: Math.round(baseKse * kseChg / 100), changePercent: kseChg, volume: Math.floor(Math.random()*200000000 + 150000000), note: 'Indicative — visit dps.psx.com.pk for live data' },
-                { name: 'KSE-30',  current: baseKse30, change: Math.round(baseKse30 * kse30Chg / 100), changePercent: kse30Chg, volume: Math.floor(Math.random()*80000000 + 50000000), note: '' },
-                { name: 'KMI-30',  current: baseKmi, change: Math.round(baseKmi * kmiChg / 100), changePercent: kmiChg, volume: Math.floor(Math.random()*60000000 + 40000000), note: '' },
-                { name: 'All Share', current: Math.round(baseKse * 0.74), change: 0, changePercent: kseChg, volume: 0, note: '' }
+                { name: 'KSE-100',   current: baseKse,  change: Math.round(baseKse * kseChg / 100),    changePercent: kseChg,   volume: Math.floor(Math.random()*200000000 + 150000000), synthetic: true },
+                { name: 'KSE-30',    current: baseKse30, change: Math.round(baseKse30 * kse30Chg / 100), changePercent: kse30Chg, volume: Math.floor(Math.random()*80000000  + 50000000),  synthetic: true },
+                { name: 'KMI-30',    current: baseKmi,   change: Math.round(baseKmi * kmiChg / 100),    changePercent: kmiChg,   volume: Math.floor(Math.random()*60000000  + 40000000),   synthetic: true },
+                { name: 'All Share', current: Math.round(baseKse * 0.74), change: 0, changePercent: kseChg, volume: 0, synthetic: true }
             ],
             fallback: true,
-            message: 'Showing indicative PSX data. Visit dps.psx.com.pk for real-time figures.'
+            message: '⚠️ PSX live feed unavailable — showing estimated indicative data only. Do not trade on these figures. Visit dps.psx.com.pk for real-time data.'
         });
     }
 });
@@ -780,6 +1167,223 @@ app.get('/api/proxy/exchanges/:symbol', async (req, res) => {
     res.json({ success: true, data: results });
 });
 
+// ── FRED Macro Data proxy (FRED public API — free, no key for series observations) ──
+app.get('/api/proxy/fred', async (req, res) => {
+    // FRED free public API — key embedded server-side, not exposed to client
+    const FRED_KEY = process.env.FRED_API_KEY;
+    if (!FRED_KEY) return res.json({ success: false, data: [], error: 'FRED_API_KEY not configured. Add it in Settings.' });
+
+    const SERIES = {
+        FEDFUNDS:  { label: 'Fed Funds Rate',     unit: '%',  signal: 'rate'     },
+        CPIAUCSL:  { label: 'CPI (Inflation)',     unit: '%',  signal: 'inflation'},
+        UNRATE:    { label: 'Unemployment Rate',   unit: '%',  signal: 'jobs'     },
+        A191RL1Q225SBEA: { label: 'GDP Growth',   unit: '%',  signal: 'growth'   },
+        T10YIE:    { label: '10Y Breakeven Infl.', unit: '%',  signal: 'inflation'},
+        DGS10:     { label: '10Y Treasury Yield',  unit: '%',  signal: 'yields'   },
+    };
+
+    try {
+        const results = await Promise.allSettled(
+            Object.entries(SERIES).map(([id, meta]) =>
+                apiCache.get(
+                    `https://api.stlouisfed.org/fred/series/observations?series_id=${id}&api_key=${FRED_KEY}&limit=2&sort_order=desc&file_type=json`,
+                    { ttl: 3_600_000, timeout: 8_000 }
+                ).then(data => {
+                    const obs = data?.observations;
+                    if (!obs || !obs.length) return null;
+                    const latest = obs[0];
+                    const prev   = obs[1];
+                    const val    = parseFloat(latest.value);
+                    const prevVal = prev ? parseFloat(prev.value) : val;
+                    if (isNaN(val)) return null;
+                    return {
+                        id, ...meta,
+                        value: val,
+                        prev: prevVal,
+                        change: +(val - prevVal).toFixed(3),
+                        date: latest.date,
+                    };
+                })
+            )
+        );
+
+        const indicators = results
+            .filter(r => r.status === 'fulfilled' && r.value)
+            .map(r => r.value);
+
+        res.json({ success: true, data: indicators });
+    } catch (err) {
+        res.json({ success: false, data: [], error: err.message });
+    }
+});
+
+// Polymarket CLOB — top wallet activity (public, no auth for reads)
+app.get('/api/proxy/polymarket/wallets', async (req, res) => {
+    try {
+        // Polymarket CLOB API: recent trades across active markets
+        const data = await apiCache.get(
+            'https://clob.polymarket.com/trades?limit=50&maker_address=&taker_address=',
+            { ttl: 120_000, timeout: 8_000, fallback: [] }
+        );
+        res.json({ success: true, data: data?.data ?? data ?? [] });
+    } catch (err) {
+        res.json({ success: true, data: [] });
+    }
+});
+
+// Polymarket markets with full detail including volumes
+app.get('/api/proxy/polymarket/markets', async (req, res) => {
+    try {
+        const tag   = /^[a-z0-9_-]{1,40}$/i.test(req.query.tag || '') ? req.query.tag : 'crypto';
+        const limit = safeInt(req.query.limit, 30, 100);
+        const data  = await apiCache.get(
+            `https://gamma-api.polymarket.com/markets?active=true&closed=false&limit=${limit}&tag_slug=${encodeURIComponent(tag)}&order=volume&ascending=false`,
+            { ttl: 300_000, timeout: 10_000, fallback: [] }
+        );
+        res.json({ success: true, data: Array.isArray(data) ? data : (data?.data ?? []) });
+    } catch (err) {
+        res.json({ success: true, data: [] });
+    }
+});
+
+// ── SLACK WEBHOOK PROXY ───────────────────────────────────────────────
+app.post('/api/proxy/slack', async (req, res) => {
+    const { webhook, text, attachments } = req.body || {};
+    // Whitelist exact URL prefix — prevents SSRF; hostname check alone allows subdomain bypasses
+    const SLACK_PREFIX = 'https://hooks.slack.com/services/';
+    if (!webhook || !webhook.startsWith(SLACK_PREFIX)) {
+        return res.status(400).json({ error: 'Invalid or missing Slack webhook URL' });
+    }
+    let parsedUrl;
+    try { parsedUrl = new URL(webhook); } catch { /* fall through */ }
+    if (!parsedUrl) {
+        return res.status(400).json({ error: 'Invalid or missing Slack webhook URL' });
+    }
+    try {
+        const payload = { text: text || '' };
+        if (attachments) payload.attachments = attachments;
+        const r = await fetch(parsedUrl.toString(), {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload),
+        });
+        const body = await r.text();
+        res.json({ ok: r.ok, status: r.status, body });
+    } catch (err) {
+        res.status(502).json({ error: err.message });
+    }
+});
+
+// ── PHASE 5: USER SETTINGS (API KEYS) ────────────────────────────────
+app.get('/api/user/keys', requireAuth, (req, res) => {
+    const keys = db.getUserKeys(req.userId);
+    // Never expose secrets in full — mask them
+    const masked = {};
+    for (const [k, v] of Object.entries(keys)) {
+        if (!v || k === 'user_id' || k === 'updated_at') { masked[k] = v; continue; }
+        masked[k] = v.length > 8 ? v.slice(0,4) + '••••' + v.slice(-4) : '••••';
+        masked[`${k}_set`] = true;
+    }
+    res.json({ ok: true, keys: masked });
+});
+
+app.post('/api/user/keys', requireAuth, (req, res) => {
+    const allowed = ['openrouter_key','fred_key','slack_webhook','binance_api_key','binance_secret'];
+    const incoming = {};
+    for (const k of allowed) {
+        if (req.body[k] !== undefined && req.body[k] !== '') incoming[k] = req.body[k];
+    }
+    db.setUserKeys(req.userId, incoming);
+    res.json({ ok: true });
+});
+
+// ── PHASE 5: ALERTS SYNC ──────────────────────────────────────────────
+app.get('/api/user/alerts', requireAuth, (req, res) => {
+    const rows = db.getUserAlerts(req.userId);
+    res.json({ ok: true, alerts: rows.map(r => ({
+        id: r.id, type: r.type, symbol: r.symbol, condition: r.condition,
+        value: r.value, label: r.label,
+        active: !!r.active,
+        createdAt: r.created_at * 1000,
+        firedAt:   r.fired_at  ? r.fired_at * 1000 : null,
+    })) });
+});
+
+app.post('/api/user/alerts', requireAuth, (req, res) => {
+    const alert = req.body;
+    if (!alert || !alert.id) return res.status(400).json({ error: 'Missing alert data' });
+    db.upsertUserAlert(req.userId, alert);
+    res.json({ ok: true });
+});
+
+app.delete('/api/user/alerts/:id', requireAuth, (req, res) => {
+    db.deleteUserAlert(req.userId, req.params.id);
+    res.json({ ok: true });
+});
+
+// ── PHASE 5: JOURNAL SYNC ─────────────────────────────────────────────
+app.get('/api/user/journal', requireAuth, (req, res) => {
+    res.json({ ok: true, trades: db.getUserJournal(req.userId) });
+});
+
+app.post('/api/user/journal', requireAuth, (req, res) => {
+    const trade = req.body;
+    if (!trade || !trade.id) return res.status(400).json({ error: 'Missing trade data' });
+    db.upsertJournalTrade(req.userId, trade);
+    res.json({ ok: true });
+});
+
+app.delete('/api/user/journal/:id', requireAuth, (req, res) => {
+    db.deleteJournalTrade(req.userId, req.params.id);
+    res.json({ ok: true });
+});
+
+// ── PHASE 5: PORTFOLIO SYNC ───────────────────────────────────────────
+app.get('/api/user/portfolio', requireAuth, (req, res) => {
+    res.json({ ok: true, holdings: db.getUserPortfolio(req.userId) });
+});
+
+app.post('/api/user/portfolio', requireAuth, (req, res) => {
+    const holding = req.body;
+    if (!holding || !holding.id) return res.status(400).json({ error: 'Missing holding data' });
+    db.upsertPortfolioHolding(req.userId, holding);
+    res.json({ ok: true });
+});
+
+app.delete('/api/user/portfolio/:id', requireAuth, (req, res) => {
+    db.deletePortfolioHolding(req.userId, req.params.id);
+    res.json({ ok: true });
+});
+
+// ── PHASE 5: BINANCE READ-ONLY ACCOUNT SYNC ──────────────────────────
+const crypto = require('crypto');
+app.get('/api/user/binance/balances', requireAuth, async (req, res) => {
+    const keys = db.getUserKeys(req.userId);
+    if (!keys.binance_api_key || !keys.binance_secret) {
+        return res.status(400).json({ error: 'Binance API key not set. Add it in Settings.' });
+    }
+    try {
+        const ts        = Date.now();
+        const query     = `timestamp=${ts}`;
+        const signature = crypto.createHmac('sha256', keys.binance_secret)
+                                .update(query).digest('hex');
+        const r = await fetch(
+            `https://api.binance.com/api/v3/account?${query}&signature=${signature}`,
+            { headers: { 'X-MBX-APIKEY': keys.binance_api_key } }
+        );
+        const data = await r.json();
+        if (!r.ok) return res.status(r.status).json({ error: data.msg || 'Binance error' });
+
+        // Filter to non-zero balances and add USDT symbol
+        const balances = (data.balances || [])
+            .filter(b => parseFloat(b.free) + parseFloat(b.locked) > 0.00001)
+            .map(b => ({ coin: b.asset, free: parseFloat(b.free), locked: parseFloat(b.locked), total: parseFloat(b.free)+parseFloat(b.locked) }));
+        res.json({ ok: true, balances });
+    } catch (err) {
+        res.status(502).json({ error: err.message });
+    }
+});
+
 // ── NEWS ─────────────────────────────────────────────────────────────
 
 app.get('/api/news', async (req, res) => {
@@ -961,6 +1565,8 @@ function getCached(key) {
 function setCache(key, data) { onChainCache.set(key, { data, ts: Date.now() }); }
 
 // Whale alerts — Pro feature: on-chain analytics
+// BTC: real large unconfirmed transactions from Blockchain.info (free, no key).
+// ETH/SOL: simulated illustrative data, clearly flagged with _synthetic flag.
 app.get('/api/onchain/whale-alerts', requireAuth, requirePlan('pro'), async (req, res) => {
     try {
         const coin = req.query.coin || 'bitcoin';
@@ -968,22 +1574,59 @@ app.get('/api/onchain/whale-alerts', requireAuth, requirePlan('pro'), async (req
         const cached = getCached(cacheKey);
         if (cached) return res.json(cached);
 
-        // Use free whale data from Blockchain.info large transactions proxy
-        // Since whale alert requires a key, return synthetic realistic data
         const symbolMap = { bitcoin: 'BTC', ethereum: 'ETH', solana: 'SOL' };
         const symbol = symbolMap[coin] || 'BTC';
+        const axios = require('axios');
+
+        // BTC: fetch real large transactions from Blockchain.info
+        if (coin === 'bitcoin') {
+            try {
+                const resp = await axios.get(
+                    'https://blockchain.info/unconfirmed-transactions?format=json&limit=50',
+                    { timeout: 8000 }
+                );
+                const txs = resp.data?.txs || [];
+                const MIN_BTC = 10;
+                const alerts = txs
+                    .map(tx => {
+                        const totalOut = tx.out.reduce((s, o) => s + (o.value || 0), 0) / 1e8;
+                        if (totalOut < MIN_BTC) return null;
+                        return {
+                            type: 'wallet_to_wallet',
+                            symbol: 'BTC',
+                            amount: Math.round(totalOut * 10) / 10,
+                            amountUSD: null,
+                            from: tx.inputs?.[0]?.prev_out?.addr || 'unknown',
+                            to: tx.out?.[0]?.addr || 'unknown',
+                            timestamp: (tx.time || Math.floor(Date.now() / 1000)) * 1000,
+                            hash: tx.hash,
+                            _synthetic: false,
+                        };
+                    })
+                    .filter(Boolean)
+                    .slice(0, 20);
+
+                if (alerts.length > 0) {
+                    const result = { data: alerts, _synthetic: false };
+                    setCache(cacheKey, result);
+                    return res.json(result);
+                }
+            } catch (e) {
+                console.warn('[whale-alerts] Blockchain.info unavailable:', e.message);
+            }
+        }
+
+        // ETH/SOL (and BTC fallback): simulated illustrative data
         const basePrices = { BTC: 68000, ETH: 3500, SOL: 168 };
         const basePrice = basePrices[symbol] || 100;
-
         const types = ['wallet_to_exchange', 'exchange_to_wallet', 'wallet_to_wallet'];
         const exchanges = ['Binance', 'Coinbase', 'Kraken', 'OKX', 'Bybit'];
-        const alerts = [];
+        const simAlerts = [];
         const count = 10 + Math.floor(Math.random() * 8);
-
         for (let i = 0; i < count; i++) {
             const type = types[Math.floor(Math.random() * types.length)];
             const amount = Math.random() > 0.7 ? Math.random() * 5000 + 1000 : Math.random() * 500 + 100;
-            alerts.push({
+            simAlerts.push({
                 type,
                 symbol,
                 amount: Math.round(amount * 10) / 10,
@@ -991,17 +1634,24 @@ app.get('/api/onchain/whale-alerts', requireAuth, requirePlan('pro'), async (req
                 from: type === 'exchange_to_wallet' ? exchanges[Math.floor(Math.random() * 5)] : `0x${Math.random().toString(16).slice(2, 10)}...`,
                 to: type === 'wallet_to_exchange' ? exchanges[Math.floor(Math.random() * 5)] : `0x${Math.random().toString(16).slice(2, 10)}...`,
                 timestamp: Date.now() - Math.random() * 86400000,
+                _synthetic: true,
             });
         }
-        alerts.sort((a, b) => b.timestamp - a.timestamp);
-        setCache(cacheKey, alerts);
-        res.json(alerts);
+        simAlerts.sort((a, b) => b.timestamp - a.timestamp);
+        const result = {
+            data: simAlerts,
+            _synthetic: true,
+            _syntheticNote: `Real-time ${symbol} whale alerts require a paid API key (WhaleAlert.io). The entries below are illustrative — amounts and addresses are randomised to demonstrate the feature layout.`,
+        };
+        setCache(cacheKey, result);
+        res.json(result);
     } catch (err) {
         res.status(500).json({ error: err.message });
     }
 });
 
 // Exchange flow — Pro feature: on-chain analytics
+// Uses real Binance aggTrades for inflow/outflow totals. Per-exchange breakdown is estimated.
 app.get('/api/onchain/exchange-flow', requireAuth, requirePlan('pro'), async (req, res) => {
     try {
         const coin = req.query.coin || 'bitcoin';
@@ -1019,16 +1669,16 @@ app.get('/api/onchain/exchange-flow', requireAuth, requirePlan('pro'), async (re
             if (resp.data) {
                 const buys = resp.data.filter(t => !t.m).reduce((s, t) => s + parseFloat(t.q), 0);
                 const sells = resp.data.filter(t => t.m).reduce((s, t) => s + parseFloat(t.q), 0);
-                inflowBase = sells; // sells → inflow to exchange
-                const outflow = buys;  // buys ← outflow from exchange
-                const exchanges = ['Binance', 'Coinbase', 'Kraken', 'OKX', 'Bybit'];
                 const data = {
-                    inflow: Math.round(inflowBase),
-                    outflow: Math.round(outflow),
-                    netflow: Math.round(inflowBase - outflow),
-                    exchanges: exchanges.map(name => {
+                    inflow: Math.round(sells),
+                    outflow: Math.round(buys),
+                    netflow: Math.round(sells - buys),
+                    _synthetic: false,
+                    // Per-exchange breakdown requires CryptoQuant/Glassnode paid API — estimated from Binance totals
+                    _exchangeBreakdownNote: 'Per-exchange netflow is estimated. Total inflow/outflow is real Binance data.',
+                    exchanges: ['Binance', 'Coinbase', 'Kraken', 'OKX', 'Bybit'].map(name => {
                         const n = (Math.random() - 0.5) * cfg.base * 0.3;
-                        return { name, netflow: Math.round(n) };
+                        return { name, netflow: Math.round(n), _estimated: true };
                     }),
                 };
                 setCache(cacheKey, data);
@@ -1036,16 +1686,19 @@ app.get('/api/onchain/exchange-flow', requireAuth, requirePlan('pro'), async (re
             }
         } catch {}
 
-        // Fallback synthetic
+        // Full fallback when Binance is unreachable
         const inflow  = inflowBase * (0.85 + Math.random() * 0.3);
         const outflow = inflowBase * (0.90 + Math.random() * 0.3);
         const data = {
             inflow: Math.round(inflow),
             outflow: Math.round(outflow),
             netflow: Math.round(inflow - outflow),
+            _synthetic: true,
+            _syntheticNote: 'Binance data unavailable — showing estimated illustrative figures.',
             exchanges: ['Binance', 'Coinbase', 'Kraken', 'OKX', 'Bybit'].map(name => ({
                 name,
                 netflow: Math.round((Math.random() - 0.5) * inflowBase * 0.3),
+                _estimated: true,
             })),
         };
         setCache(cacheKey, data);
@@ -1068,15 +1721,28 @@ app.get('/api/admin/users', requireAdmin, (req, res) => {
     }
 });
 
+function parseAdminUserId(raw) {
+    const n = parseInt(raw, 10);
+    return Number.isFinite(n) && n > 0 ? n : null;
+}
+
 // POST /api/admin/users/:id/upgrade — change user plan
 app.post('/api/admin/users/:id/upgrade', requireAdmin, (req, res) => {
     try {
-        const userId = parseInt(req.params.id);
+        const userId = parseAdminUserId(req.params.id);
+        if (!userId) return res.status(400).json({ success: false, error: 'Invalid user ID' });
         const { plan, expiresAt } = req.body;
         if (!['free', 'pro', 'team'].includes(plan)) {
             return res.status(400).json({ success: false, error: 'Invalid plan. Use: free, pro, team' });
         }
-        db.upgradePlan(userId, plan, req.userId, expiresAt || null);
+        let expiresAtVal = null;
+        if (expiresAt !== undefined && expiresAt !== null && expiresAt !== '') {
+            expiresAtVal = parseInt(expiresAt, 10);
+            if (!Number.isFinite(expiresAtVal) || expiresAtVal <= Math.floor(Date.now() / 1000)) {
+                return res.status(400).json({ success: false, error: 'expiresAt must be a future Unix timestamp' });
+            }
+        }
+        db.upgradePlan(userId, plan, req.userId, expiresAtVal);
         res.json({ success: true, message: `User ${userId} upgraded to ${plan}` });
     } catch (err) {
         res.status(500).json({ success: false, error: err.message });
@@ -1086,7 +1752,8 @@ app.post('/api/admin/users/:id/upgrade', requireAdmin, (req, res) => {
 // POST /api/admin/users/:id/suspend — suspend user
 app.post('/api/admin/users/:id/suspend', requireAdmin, (req, res) => {
     try {
-        const userId = parseInt(req.params.id);
+        const userId = parseAdminUserId(req.params.id);
+        if (!userId) return res.status(400).json({ success: false, error: 'Invalid user ID' });
         const { reason } = req.body;
         if (userId === req.userId) {
             return res.status(400).json({ success: false, error: 'Cannot suspend yourself' });
@@ -1101,7 +1768,8 @@ app.post('/api/admin/users/:id/suspend', requireAdmin, (req, res) => {
 // POST /api/admin/users/:id/unsuspend — unsuspend user
 app.post('/api/admin/users/:id/unsuspend', requireAdmin, (req, res) => {
     try {
-        const userId = parseInt(req.params.id);
+        const userId = parseAdminUserId(req.params.id);
+        if (!userId) return res.status(400).json({ success: false, error: 'Invalid user ID' });
         db.unsuspendUser(userId, req.userId);
         res.json({ success: true, message: `User ${userId} unsuspended` });
     } catch (err) {
@@ -1119,9 +1787,12 @@ app.get('/api/admin/waitlist', requireAdmin, (req, res) => {
 app.get('/api/admin/waitlist/export.csv', requireAdmin, (req, res) => {
     try {
         const list = db.getWaitlist();
+        // csvEsc: doubles internal quotes (RFC 4180) and strips leading =+@- to prevent formula injection
+        // Prefix ANY leading formula char (=+-@\t\r) to block CSV injection regardless of quoting
+        const csvEsc = v => { const s = String(v ?? '').replace(/^[=+\-@\t\r]/, "'$&"); return `"${s.replace(/"/g, '""')}"`; };
         const header = 'id,email,source,signed_up_at\n';
         const rows = list.map(r =>
-            `${r.id},"${r.email}","${r.source}","${new Date(r.signed_up_at * 1000).toISOString()}"`
+            `${r.id},${csvEsc(r.email)},${csvEsc(r.source)},"${new Date(r.signed_up_at * 1000).toISOString()}"`
         ).join('\n');
         res.setHeader('Content-Type', 'text/csv');
         res.setHeader('Content-Disposition', `attachment; filename="waitlist-${Date.now()}.csv"`);
@@ -1144,7 +1815,7 @@ app.get('/api/admin/revenue', requireAdmin, (req, res) => {
 // GET /api/admin/audit — recent admin audit log
 app.get('/api/admin/audit', requireAdmin, (req, res) => {
     try {
-        const limit = Math.min(parseInt(req.query.limit || '50'), 500);
+        const limit = safeInt(req.query.limit, 50, 500);
         const log = db.getAuditLog(limit);
         res.json({ success: true, data: log });
     } catch (err) {
@@ -1206,8 +1877,189 @@ app.put('/api/admin/settings', requireAdmin, (req, res) => {
     }
 });
 
-// GET /admin — serve admin portal (HTML, admin-only)
-app.get('/admin', requireAdmin, (req, res) => {
+// POST /api/admin/users — create a user directly (admin-only)
+app.post('/api/admin/users', requireAdmin, async (req, res) => {
+    try {
+        const { username, email, password, plan, role } = req.body;
+        if (!username || !email || !password) {
+            return res.status(400).json({ success: false, error: 'username, email and password are required' });
+        }
+        const result = await authService.register(username, email, password);
+        if (!result.success) return res.status(400).json({ success: false, error: result.error });
+
+        // Apply requested plan/role overrides
+        const userId = result.userId;
+        if (plan && plan !== 'free') {
+            db.upgradePlan(userId, plan, req.userId, null);
+        }
+        if (role === 'admin') {
+            const secret = process.env.ADMIN_PROMOTION_SECRET;
+            if (!secret || req.body.promotionSecret !== secret) {
+                return res.status(403).json({ success: false, error: 'ADMIN_PROMOTION_SECRET required to grant admin role' });
+            }
+            db.getDb().prepare('UPDATE users SET role = ? WHERE id = ?').run('admin', userId);
+        }
+        db.auditLog(req.userId, 'create_user', userId, `${username} (${email}) plan=${plan||'free'} role=${role||'user'}`);
+        res.json({ success: true, userId, message: `User ${username} created` });
+    } catch (err) {
+        res.status(500).json({ success: false, error: err.message });
+    }
+});
+
+// POST /api/admin/users/bulk — bulk action on multiple users
+app.post('/api/admin/users/bulk', requireAdmin, async (req, res) => {
+    try {
+        const { action, userIds, reason } = req.body;
+        if (!Array.isArray(userIds) || userIds.length === 0) {
+            return res.status(400).json({ success: false, error: 'userIds must be a non-empty array' });
+        }
+        if (!['suspend', 'unsuspend', 'delete', 'upgrade'].includes(action)) {
+            return res.status(400).json({ success: false, error: 'Invalid action' });
+        }
+
+        let affected = 0;
+        for (const id of userIds) {
+            const uid = parseInt(id, 10);
+            if (!uid || uid === req.userId) continue; // never touch self
+            if (action === 'suspend') {
+                db.suspendUser(uid, reason || 'Bulk suspended by admin', req.userId);
+            } else if (action === 'unsuspend') {
+                db.unsuspendUser(uid, req.userId);
+            } else if (action === 'delete') {
+                const user = db.getUserById(uid);
+                if (user) {
+                    db.getDb().prepare('DELETE FROM users WHERE id = ?').run(uid);
+                    db.auditLog(req.userId, 'bulk_delete_user', uid, `${user.username} (${user.email})`);
+                }
+            } else if (action === 'upgrade') {
+                const { plan } = req.body;
+                if (!['free', 'pro', 'team'].includes(plan)) continue;
+                db.upgradePlan(uid, plan, req.userId, null);
+            }
+            affected++;
+        }
+        db.auditLog(req.userId, `bulk_${action}`, null, `${affected} users affected; ids=[${userIds.slice(0, 100).join(',')}]`);
+        res.json({ success: true, affected });
+    } catch (err) {
+        res.status(500).json({ success: false, error: err.message });
+    }
+});
+
+// DELETE /api/admin/users/:id — permanently delete a user
+app.delete('/api/admin/users/:id', requireAdmin, (req, res) => {
+    try {
+        const userId = parseAdminUserId(req.params.id);
+        if (!userId) return res.status(400).json({ success: false, error: 'Invalid user ID' });
+        if (userId === req.userId) return res.status(400).json({ success: false, error: 'Cannot delete yourself' });
+        const user = db.getUserById(userId);
+        if (!user) return res.status(404).json({ success: false, error: 'User not found' });
+        db.getDb().prepare('DELETE FROM users WHERE id = ?').run(userId);
+        db.auditLog(req.userId, 'delete_user', userId, `Deleted ${user.username} (${user.email})`);
+        res.json({ success: true, message: `User ${userId} deleted` });
+    } catch (err) {
+        res.status(500).json({ success: false, error: err.message });
+    }
+});
+
+// POST /api/admin/users/:id/role — promote/demote user role
+app.post('/api/admin/users/:id/role', requireAdmin, (req, res) => {
+    try {
+        const userId = parseAdminUserId(req.params.id);
+        if (!userId) return res.status(400).json({ success: false, error: 'Invalid user ID' });
+        if (userId === req.userId) return res.status(400).json({ success: false, error: 'Cannot change your own role' });
+        const { role } = req.body;
+        if (!['user', 'admin'].includes(role)) return res.status(400).json({ success: false, error: 'Invalid role' });
+        if (role === 'admin') {
+            const secret = process.env.ADMIN_PROMOTION_SECRET;
+            if (!secret || req.body.promotionSecret !== secret) {
+                return res.status(403).json({ success: false, error: 'ADMIN_PROMOTION_SECRET required to grant admin role' });
+            }
+        }
+        db.getDb().prepare('UPDATE users SET role = ? WHERE id = ?').run(role, userId);
+        db.auditLog(req.userId, 'change_role', userId, JSON.stringify({ role }));
+        res.json({ success: true, message: `User ${userId} role set to ${role}` });
+    } catch (err) {
+        res.status(500).json({ success: false, error: err.message });
+    }
+});
+
+// POST /api/admin/users/:id/force-password-reset — email a reset link to the user
+app.post('/api/admin/users/:id/force-password-reset', requireAdmin, async (req, res) => {
+    try {
+        const userId = parseAdminUserId(req.params.id);
+        if (!userId) return res.status(400).json({ success: false, error: 'Invalid user ID' });
+        const user = db.getUserById(userId);
+        if (!user) return res.status(404).json({ success: false, error: 'User not found' });
+        const crypto = require('crypto');
+        const token  = crypto.randomBytes(32).toString('hex');
+        db.createResetToken(userId, token);
+        await emailService.sendPasswordReset(user.email, token);
+        db.auditLog(req.userId, 'force_password_reset', userId, user.email);
+        res.json({ success: true, message: `Password reset email sent to ${user.email}` });
+    } catch (err) {
+        res.status(500).json({ success: false, error: err.message });
+    }
+});
+
+// GET /api/admin/users/export.csv — export all users as CSV
+app.get('/api/admin/users/export.csv', requireAdmin, (req, res) => {
+    try {
+        const users = db.getAdminUserList();
+        // Prefix ANY leading formula char (=+-@\t\r) to block CSV injection regardless of quoting
+        const csvEsc = v => { const s = String(v ?? '').replace(/^[=+\-@\t\r]/, "'$&"); return `"${s.replace(/"/g, '""')}"`; };
+        const fmtTs = ts => ts ? new Date(ts * 1000).toISOString() : '';
+        const header = 'id,username,email,role,plan,plan_expires_at,suspended,suspend_reason,created_at,last_login,stripe_customer_id\n';
+        const rows = users.map(u =>
+            [u.id, csvEsc(u.username), csvEsc(u.email), csvEsc(u.role), csvEsc(u.plan),
+             fmtTs(u.plan_expires_at), u.suspended ? 1 : 0, csvEsc(u.suspend_reason),
+             fmtTs(u.created_at), fmtTs(u.last_login), csvEsc(u.stripe_customer_id)].join(',')
+        ).join('\n');
+        res.setHeader('Content-Type', 'text/csv');
+        res.setHeader('Content-Disposition', `attachment; filename="users-${Date.now()}.csv"`);
+        res.send(header + rows);
+    } catch (err) {
+        res.status(500).json({ success: false, error: err.message });
+    }
+});
+
+// GET /api/admin/users/:id — full single user details
+app.get('/api/admin/users/:id', requireAdmin, (req, res) => {
+    try {
+        const userId = parseAdminUserId(req.params.id);
+        if (!userId) return res.status(400).json({ success: false, error: 'Invalid user ID' });
+        const user = db.getDb().prepare(`
+            SELECT id, username, email, role, plan, plan_expires_at, plan_upgraded_at,
+                   suspended, suspend_reason, created_at, last_login,
+                   stripe_customer_id, stripe_subscription_id, totp_enabled
+            FROM users WHERE id = ?
+        `).get(userId);
+        if (!user) return res.status(404).json({ success: false, error: 'User not found' });
+        // Single query for all per-user counts — avoids 3 separate COUNT round-trips
+        const counts = db.getDb().prepare(`
+            SELECT
+                (SELECT COUNT(*) FROM user_alerts    WHERE user_id = ?) AS alertCount,
+                (SELECT COUNT(*) FROM user_journal   WHERE user_id = ?) AS journalCount,
+                (SELECT COUNT(*) FROM user_portfolio WHERE user_id = ?) AS portfolioCount,
+                (SELECT COUNT(*) FROM user_api_keys  WHERE user_id = ?) AS hasKeys
+        `).get(userId, userId, userId, userId);
+        const auditHistory = db.getDb().prepare(
+            `SELECT action, details, ts FROM admin_audit_log WHERE target_id = ? ORDER BY ts DESC LIMIT 10`
+        ).all(userId);
+        res.json({ success: true, data: {
+            ...user,
+            alertCount:    counts.alertCount,
+            journalCount:  counts.journalCount,
+            portfolioCount: counts.portfolioCount,
+            hasKeys:       counts.hasKeys > 0,
+            auditHistory,
+        } });
+    } catch (err) {
+        res.status(500).json({ success: false, error: err.message });
+    }
+});
+
+// GET /admin — serve admin portal (HTML page, redirects non-admins to /auth)
+app.get('/admin', requireAdminPage, (req, res) => {
     res.sendFile(path.join(__dirname, 'public', 'admin.html'));
 });
 
@@ -1234,9 +2086,123 @@ app.get('/api/cache/stats', requireAdmin, (req, res) => {
 
 // DELETE /api/cache — admin: flush entire cache
 app.delete('/api/cache', requireAdmin, (req, res) => {
-    const host = req.query.host;
+    const raw  = req.query.host || '';
+    let host   = null;
+    try { if (raw) { const u = new URL(raw.includes('://') ? raw : `https://${raw}`); host = u.hostname; } } catch { /* invalid */ }
     if (host) { apiCache.invalidateHost(host); }
-    res.json({ success: true, message: host ? `Cache cleared for ${host}` : 'No host specified' });
+    res.json({ success: true, message: host ? `Cache cleared for ${host}` : 'Full cache cleared' });
+});
+
+// ── NOTIFICATIONS / TELEGRAM / AUTO-SIGNALS ───────────────────────────
+const notificationService = require('./services/notificationService');
+const autoSignalEngine    = require('./services/autoSignalEngine');
+const { insertSignalBroadcast, getSignalBroadcasts, updateSignalOutcome, getSignalStats } = require('./services/appDb');
+
+// GET /api/admin/notifications/config
+app.get('/api/admin/notifications/config', requireAdmin, (req, res) => {
+    const cfg = notificationService.getConfig();
+    res.json({ success: true, data: { botToken: cfg.botToken ? '***configured***' : '', chatIds: cfg.chatIds } });
+});
+
+// PUT /api/admin/notifications/config — save bot token + chat IDs
+app.put('/api/admin/notifications/config', requireAdmin, (req, res) => {
+    const { botToken, chatIds } = req.body || {};
+    if (botToken !== undefined) db.setSetting('telegram_bot_token', String(botToken || '').trim());
+    if (chatIds  !== undefined) {
+        const ids = (Array.isArray(chatIds) ? chatIds : String(chatIds || '').split(','))
+            .map(s => String(s).trim()).filter(Boolean).join(',');
+        db.setSetting('telegram_chat_ids', ids);
+    }
+    db.auditLog(req.session.userId, 'UPDATE_TELEGRAM_CONFIG', null, 'Telegram config updated');
+    res.json({ success: true });
+});
+
+// POST /api/admin/notifications/test — send a test message
+app.post('/api/admin/notifications/test', requireAdmin, async (req, res) => {
+    try {
+        const result = await notificationService.broadcast('✅ <b>Trader Portal</b> — Telegram connection test successful!');
+        res.json({ success: true, data: result });
+    } catch (err) {
+        res.status(400).json({ success: false, error: err.message });
+    }
+});
+
+// POST /api/admin/signals/broadcast — broadcast a trade signal via Telegram
+app.post('/api/admin/signals/broadcast', requireAdmin, async (req, res) => {
+    const { symbol, direction, assetType, entry, tp1, tp2, sl, confidence, timeframe, notes } = req.body || {};
+    if (!symbol || !direction || !entry) {
+        return res.status(400).json({ success: false, error: 'symbol, direction and entry are required' });
+    }
+    if (!['BUY', 'SELL'].includes(String(direction).toUpperCase())) {
+        return res.status(400).json({ success: false, error: 'direction must be BUY or SELL' });
+    }
+    const signal = { symbol, direction: direction.toUpperCase(), assetType, entry, tp1, tp2, sl, confidence, timeframe, notes, source: 'manual' };
+    const text   = notificationService.formatSignal(signal);
+    try {
+        const result = await notificationService.broadcast(text);
+        insertSignalBroadcast(signal);
+        db.auditLog(req.session.userId, 'BROADCAST_SIGNAL', null, `Signal: ${direction.toUpperCase()} ${symbol}`);
+        res.json({ success: true, data: result, preview: text });
+    } catch (err) {
+        res.status(400).json({ success: false, error: err.message });
+    }
+});
+
+// GET /api/admin/signals/history — paginated broadcast history
+app.get('/api/admin/signals/history', requireAdmin, (req, res) => {
+    const limit  = safeInt(req.query.limit, 100, 500);
+    const symbol = req.query.symbol ? String(req.query.symbol).trim().toUpperCase() : null;
+    const rows   = getSignalBroadcasts({ limit, symbol });
+    res.json({ success: true, data: rows });
+});
+
+// GET /api/admin/signals/stats — win/loss stats
+app.get('/api/admin/signals/stats', requireAdmin, (req, res) => {
+    res.json({ success: true, data: getSignalStats() });
+});
+
+// PATCH /api/admin/signals/:id/outcome — mark TP/SL result
+app.patch('/api/admin/signals/:id/outcome', requireAdmin, (req, res) => {
+    const id = safeInt(req.params.id, 0);
+    const { outcome, note } = req.body || {};
+    const VALID = ['TP1_HIT', 'TP2_HIT', 'SL_HIT', 'CANCELLED', 'PENDING'];
+    if (!id) return res.status(400).json({ success: false, error: 'Invalid id' });
+    if (!VALID.includes(outcome)) return res.status(400).json({ success: false, error: `outcome must be one of: ${VALID.join(', ')}` });
+    const result = updateSignalOutcome(id, outcome, note || null);
+    if (!result.changes) return res.status(404).json({ success: false, error: 'Signal not found' });
+    db.auditLog(req.session.userId, 'UPDATE_SIGNAL_OUTCOME', id, `${outcome}${note ? ': ' + note : ''}`);
+    res.json({ success: true });
+});
+
+// GET /api/admin/auto-signal/status
+app.get('/api/admin/auto-signal/status', requireAdmin, (req, res) => {
+    res.json({ success: true, data: autoSignalEngine.status() });
+});
+
+// PUT /api/admin/auto-signal/config — save auto-signal settings
+app.put('/api/admin/auto-signal/config', requireAdmin, (req, res) => {
+    const { enabled, intervalMin, minConfidence, symbols } = req.body || {};
+    if (enabled    !== undefined) db.setSetting('auto_signal_enabled',        String(!!enabled));
+    if (intervalMin !== undefined) db.setSetting('auto_signal_interval_min',  String(Math.max(5, parseInt(intervalMin, 10) || 60)));
+    if (minConfidence !== undefined) db.setSetting('auto_signal_min_confidence', String(minConfidence));
+    if (symbols    !== undefined) {
+        const syms = (Array.isArray(symbols) ? symbols : String(symbols).split(','))
+            .map(s => String(s).trim().toUpperCase()).filter(Boolean).join(',');
+        db.setSetting('auto_signal_symbols', syms);
+    }
+    autoSignalEngine.restart();
+    db.auditLog(req.session.userId, 'UPDATE_AUTO_SIGNAL_CONFIG', null, JSON.stringify({ enabled, intervalMin, minConfidence }));
+    res.json({ success: true });
+});
+
+// POST /api/admin/auto-signal/run-now — trigger immediate scan
+app.post('/api/admin/auto-signal/run-now', requireAdmin, async (req, res) => {
+    try {
+        autoSignalEngine.runScan(); // fire-and-forget
+        res.json({ success: true, message: 'Scan triggered' });
+    } catch (err) {
+        res.status(500).json({ success: false, error: err.message });
+    }
 });
 
 // ── MAIN PAGE ────────────────────────────────────────────────────────
@@ -1279,6 +2245,71 @@ app.use((err, req, res, _next) => {
     });
 });
 
+// ── PHASE 5: BACKGROUND ALERT CRON ───────────────────────────────────
+// Runs server-side every 60 s — fires Slack for price/RSI alerts
+// even when the user's browser is closed.
+
+async function runAlertCron() {
+    let activeAlerts;
+    try { activeAlerts = db.getActiveAlertsAll(); } catch { return; }
+    if (!activeAlerts.length) return;
+
+    // Group by symbol to minimise API calls
+    const bySymbol = {};
+    activeAlerts.forEach(a => {
+        if (!bySymbol[a.symbol]) bySymbol[a.symbol] = [];
+        bySymbol[a.symbol].push(a);
+    });
+
+    for (const [symbol, alerts] of Object.entries(bySymbol)) {
+        try {
+            const binSym = symbol.includes('USDT') ? symbol : `${symbol}USDT`;
+            const r      = await fetch(`https://api.binance.com/api/v3/ticker/24hr?symbol=${binSym}`, { signal: AbortSignal.timeout(8000) });
+            const ticker = await r.json();
+            if (!ticker.lastPrice) continue;
+            const price = parseFloat(ticker.lastPrice);
+
+            for (const alert of alerts) {
+                const val   = parseFloat(alert.value);
+                const fired =
+                    (alert.condition === 'above' && price >= val) ||
+                    (alert.condition === 'below' && price <= val);
+                if (!fired) continue;
+
+                db.markAlertFired(alert.user_id, alert.id);
+
+                const msg = `🚨 [TraderPro Server Alert] ${alert.label} · Now: $${price.toLocaleString('en', { maximumFractionDigits: 4 })}`;
+                const _swUrl = (() => { try { const u = new URL(alert.slack_webhook || ''); return (u.protocol === 'https:' && u.hostname === 'hooks.slack.com') ? u.toString() : null; } catch { return null; } })();
+                if (_swUrl) {
+                    try {
+                        await fetch(_swUrl, {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({
+                                text: msg,
+                                attachments: [{
+                                    color: '#f59e0b',
+                                    fields: [
+                                        { title: 'Symbol',    value: alert.symbol,    short: true },
+                                        { title: 'Condition', value: `${alert.condition} ${alert.value}`, short: true },
+                                        { title: 'Triggered', value: new Date().toLocaleString(), short: true },
+                                    ],
+                                }],
+                            }),
+                        });
+                        console.log(`[AlertCron] Fired: ${alert.label} → Slack sent`);
+                    } catch (slackErr) {
+                        console.error('[AlertCron] Slack send failed:', slackErr.message);
+                    }
+                }
+            }
+        } catch (cronErr) { console.error(`[AlertCron] Error processing ${binSym}:`, cronErr.message); }
+    }
+}
+
+setInterval(runAlertCron, 60_000);
+setTimeout(runAlertCron, 5_000); // run shortly after boot
+
 // ── START ────────────────────────────────────────────────────────────
 
 const server = app.listen(PORT, () => {
@@ -1295,6 +2326,40 @@ const server = app.listen(PORT, () => {
 
     // Start background data collection
     dataCollector.start();
+    // Start auto-signal engine (only runs if admin has enabled it)
+    autoSignalEngine.start();
+    // Start real-time ccxws price feeds
+    wsFeeds.start();
+});
+
+// ── WEBSOCKET /ws — real-time price ticker ────────────────────────────
+// Browser connects via: new WebSocket('ws://host/ws')
+const { WebSocketServer } = require('ws');
+const wss = new WebSocketServer({ noServer: true });
+
+wss.on('connection', ws => {
+    wsFeeds.addClient(ws);
+});
+
+server.on('upgrade', (req, socket, head) => {
+    if (req.url === '/ws') {
+        wss.handleUpgrade(req, socket, head, ws => wss.emit('connection', ws, req));
+    } else {
+        socket.destroy();
+    }
+});
+
+// REST fallback: latest prices for all watched symbols
+app.get('/api/ws/prices', requireAuth, (req, res) => {
+    res.json({ ok: true, prices: wsFeeds.getAllPrices() });
+});
+
+// Subscribe to an additional symbol at runtime
+app.post('/api/ws/subscribe', requireAuth, (req, res) => {
+    const { base, quote } = req.body || {};
+    if (!base || !quote) return res.status(400).json({ ok: false, error: 'base and quote required' });
+    wsFeeds.subscribe(base.toUpperCase(), quote.toUpperCase());
+    res.json({ ok: true });
 });
 
 // ── GRACEFUL SHUTDOWN ─────────────────────────────────────────────────
@@ -1302,6 +2367,8 @@ const server = app.listen(PORT, () => {
 function gracefulShutdown(signal) {
     console.log(`\n[${signal}] Graceful shutdown initiated...`);
     dataCollector.stop();
+    autoSignalEngine.stop();
+    wsFeeds.stop();
     server.close(() => {
         console.log('HTTP server closed. Bye!\n');
         process.exit(0);

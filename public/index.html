@@ -16,6 +16,7 @@
   <link rel="apple-touch-icon" href="/icons/icon-192.png">
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns@3.0.0/dist/chartjs-adapter-date-fns.bundle.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/lightweight-charts@4.2.0/dist/lightweight-charts.standalone.production.js"></script>
 </head>
 
 <body>
@@ -40,10 +41,10 @@
           </div>
         </div>
         <div class="header-right">
-          <button class="header-search-btn" onclick="openUniversalSearch()" title="Search (Ctrl+K)">
+          <button class="header-search-btn" id="headerSearchBtn" title="Search (Ctrl+K)">
             🔍 <span class="search-hint">Ctrl+K</span>
           </button>
-          <button class="theme-toggle-btn" id="themeToggleBtn" onclick="toggleTheme()" title="Toggle light/dark theme">☀️</button>
+          <button class="theme-toggle-btn" id="themeToggleBtn" title="Toggle light/dark theme">☀️</button>
           <div class="market-status" id="marketStatus">
             <span class="status-dot active"></span>
             <span>Live</span>
@@ -75,6 +76,27 @@
           <div class="nav-group-label">Overview</div>
           <button class="nav-item active" data-section="dashboard">
             <span class="nav-icon">🏠</span><span>Dashboard</span>
+          </button>
+          <button class="nav-item" data-section="command-center">
+            <span class="nav-icon">⚡</span><span>Command Center</span><span class="nav-badge-new">NEW</span>
+          </button>
+          <button class="nav-item" data-section="alert-engine">
+            <span class="nav-icon">🔔</span><span>Smart Alerts</span><span class="nav-badge-new">NEW</span>
+          </button>
+          <button class="nav-item" data-section="trade-journal">
+            <span class="nav-icon">📓</span><span>Trade Journal</span><span class="nav-badge-new">NEW</span>
+          </button>
+          <button class="nav-item" data-section="performance-dashboard">
+            <span class="nav-icon">📈</span><span>Performance</span><span class="nav-badge-new">NEW</span>
+          </button>
+          <button class="nav-item" data-section="backtester">
+            <span class="nav-icon">🧪</span><span>Backtester</span><span class="nav-badge-new">NEW</span>
+          </button>
+          <button class="nav-item" data-section="portfolio-tracker">
+            <span class="nav-icon">💼</span><span>Portfolio</span><span class="nav-badge-new">NEW</span>
+          </button>
+          <button class="nav-item" data-section="settings">
+            <span class="nav-icon">⚙️</span><span>Settings</span>
           </button>
           <button class="nav-item" data-section="heatmap">
             <span class="nav-icon">🔥</span><span>Heatmap</span>
@@ -275,8 +297,26 @@
         </div>
       </aside>
 
+      <!-- ======= LIVE TICKER STRIP ======= -->
+      <div id="ticker-strip" class="ticker-strip-bar"></div>
+
       <!-- Content Area -->
       <main class="content">
+
+        <!-- ======= COMMAND CENTER ======= -->
+        <section id="command-center" class="section"></section>
+
+        <!-- ======= PHASE 3 SECTIONS ======= -->
+        <section id="alert-engine" class="section"></section>
+        <section id="trade-journal" class="section"></section>
+        <section id="performance-dashboard" class="section"></section>
+
+        <!-- ======= PHASE 4 SECTIONS ======= -->
+        <section id="backtester" class="section"></section>
+        <section id="portfolio-tracker" class="section"></section>
+
+        <!-- ======= PHASE 5 SECTIONS ======= -->
+        <section id="settings" class="section"></section>
 
         <!-- ======= DASHBOARD ======= -->
         <section id="dashboard" class="section active">
@@ -287,27 +327,27 @@
               <h1 class="journey-title">Your Trading Journey Starts Here</h1>
               <p class="journey-subtitle">One platform. All markets. Complete education. From your first trade to building a system.</p>
               <div class="journey-progress-bar">
-                <div class="jp-step active" onclick="switchSection('academy')">
+                <div class="jp-step active" data-section="academy">
                   <div class="jp-step-icon">🎓</div>
                   <div class="jp-step-label">1. Learn</div>
                 </div>
                 <div class="jp-connector"></div>
-                <div class="jp-step" onclick="switchSection('papertrading')">
+                <div class="jp-step" data-section="papertrading">
                   <div class="jp-step-icon">🎮</div>
                   <div class="jp-step-label">2. Practice</div>
                 </div>
                 <div class="jp-connector"></div>
-                <div class="jp-step" onclick="switchSection('markets')">
+                <div class="jp-step" data-section="markets">
                   <div class="jp-step-icon">📈</div>
                   <div class="jp-step-label">3. Analyse</div>
                 </div>
                 <div class="jp-connector"></div>
-                <div class="jp-step" onclick="switchSection('screener')">
+                <div class="jp-step" data-section="screener">
                   <div class="jp-step-icon">🔍</div>
                   <div class="jp-step-label">4. Screen</div>
                 </div>
                 <div class="jp-connector"></div>
-                <div class="jp-step" onclick="switchSection('journal')">
+                <div class="jp-step" data-section="journal">
                   <div class="jp-step-icon">📓</div>
                   <div class="jp-step-label">5. Track</div>
                 </div>
@@ -318,7 +358,7 @@
           <!-- ══ LIVE MARKET PULSE ══ -->
           <div class="dashboard-section-label">📡 Live Market Pulse</div>
           <div class="summary-tiles" id="summaryTiles">
-            <div class="summary-tile" onclick="switchSection('crypto')">
+            <div class="summary-tile" data-section="crypto">
               <div class="tile-icon">₿</div>
               <div class="tile-info">
                 <div class="tile-label">Bitcoin</div>
@@ -326,7 +366,7 @@
                 <div class="tile-change" id="btcChange">--</div>
               </div>
             </div>
-            <div class="summary-tile" onclick="switchSection('crypto')">
+            <div class="summary-tile" data-section="crypto">
               <div class="tile-icon">Ξ</div>
               <div class="tile-info">
                 <div class="tile-label">Ethereum</div>
@@ -334,7 +374,7 @@
                 <div class="tile-change" id="ethChange">--</div>
               </div>
             </div>
-            <div class="summary-tile" onclick="switchSection('psx')">
+            <div class="summary-tile" data-section="psx">
               <div class="tile-icon">🇵🇰</div>
               <div class="tile-info">
                 <div class="tile-label">KSE-100</div>
@@ -342,7 +382,7 @@
                 <div class="tile-change" id="kse100Change">PSX</div>
               </div>
             </div>
-            <div class="summary-tile" onclick="switchSection('global-markets')">
+            <div class="summary-tile" data-section="global-markets">
               <div class="tile-icon">🇺🇸</div>
               <div class="tile-info">
                 <div class="tile-label">S&amp;P 500</div>
@@ -350,7 +390,7 @@
                 <div class="tile-change" id="sp500Change">US Market</div>
               </div>
             </div>
-            <div class="summary-tile" onclick="switchSection('global-markets')">
+            <div class="summary-tile" data-section="global-markets">
               <div class="tile-icon">🇬🇧</div>
               <div class="tile-info">
                 <div class="tile-label">FTSE 100</div>
@@ -358,7 +398,7 @@
                 <div class="tile-change" id="ftse100Change">UK Market</div>
               </div>
             </div>
-            <div class="summary-tile" onclick="switchSection('forex')">
+            <div class="summary-tile" data-section="forex">
               <div class="tile-icon">💵</div>
               <div class="tile-info">
                 <div class="tile-label">USD/PKR</div>
@@ -387,7 +427,7 @@
           <!-- ══ QUICK ACCESS CARDS ══ -->
           <div class="dashboard-section-label">⚡ Quick Access by Market</div>
           <div class="market-access-grid">
-            <div class="market-access-card crypto-card" onclick="switchSection('crypto')">
+            <div class="market-access-card crypto-card" data-section="crypto">
               <div class="mac-header">
                 <span class="mac-flag">₿</span>
                 <div>
@@ -400,13 +440,13 @@
                 <span class="mac-stat-label">Buy signals</span>
               </div>
               <div class="mac-links">
-                <span onclick="event.stopPropagation(); switchSection('crypto')">Prices</span>
-                <span onclick="event.stopPropagation(); switchSection('markets')">Analyse</span>
-                <span onclick="event.stopPropagation(); switchSection('screener')">Screener</span>
-                <span onclick="event.stopPropagation(); switchSection('futures')">Futures</span>
+                <span data-section="crypto">Prices</span>
+                <span data-section="markets">Analyse</span>
+                <span data-section="screener">Screener</span>
+                <span data-section="futures">Futures</span>
               </div>
             </div>
-            <div class="market-access-card psx-card" onclick="switchSection('psx')">
+            <div class="market-access-card psx-card" data-section="psx">
               <div class="mac-header">
                 <span class="mac-flag">🇵🇰</span>
                 <div>
@@ -419,11 +459,11 @@
                 <span class="mac-stat-label">KSE-100</span>
               </div>
               <div class="mac-links">
-                <span onclick="event.stopPropagation(); switchSection('psx')">Stocks</span>
-                <span onclick="event.stopPropagation(); switchSection('academy'); setTimeout(()=>setAcademyTrack('psx-learn'),300)">PSX Guide</span>
+                <span data-section="psx">Stocks</span>
+                <span data-section="academy" data-track="psx-learn">PSX Guide</span>
               </div>
             </div>
-            <div class="market-access-card us-card" onclick="switchSection('global-markets')">
+            <div class="market-access-card us-card" data-section="global-markets">
               <div class="mac-header">
                 <span class="mac-flag">🇺🇸</span>
                 <div>
@@ -436,11 +476,11 @@
                 <span class="mac-stat-label">S&amp;P 500</span>
               </div>
               <div class="mac-links">
-                <span onclick="event.stopPropagation(); switchSection('global-markets')">Stocks</span>
-                <span onclick="event.stopPropagation(); switchSection('global-markets')">Indices</span>
+                <span data-section="global-markets">Stocks</span>
+                <span data-section="global-markets">Indices</span>
               </div>
             </div>
-            <div class="market-access-card uk-card" onclick="switchSection('global-markets')">
+            <div class="market-access-card uk-card" data-section="global-markets">
               <div class="mac-header">
                 <span class="mac-flag">🇬🇧</span>
                 <div>
@@ -453,11 +493,11 @@
                 <span class="mac-stat-label">FTSE 100</span>
               </div>
               <div class="mac-links">
-                <span onclick="event.stopPropagation(); switchSection('global-markets')">Stocks</span>
-                <span onclick="event.stopPropagation(); switchSection('global-markets')">Screener</span>
+                <span data-section="global-markets">Stocks</span>
+                <span data-section="global-markets">Screener</span>
               </div>
             </div>
-            <div class="market-access-card forex-card" onclick="switchSection('forex')">
+            <div class="market-access-card forex-card" data-section="forex">
               <div class="mac-header">
                 <span class="mac-flag">💱</span>
                 <div>
@@ -470,8 +510,8 @@
                 <span class="mac-stat-label">USD/PKR</span>
               </div>
               <div class="mac-links">
-                <span onclick="event.stopPropagation(); switchSection('forex')">Rates</span>
-                <span onclick="event.stopPropagation(); switchSection('converter')">Convert</span>
+                <span data-section="forex">Rates</span>
+                <span data-section="converter">Convert</span>
               </div>
             </div>
           </div>
@@ -479,42 +519,42 @@
           <!-- ══ BEGINNER START HERE ══ -->
           <div class="dashboard-section-label">🚀 Start Here — Your Path</div>
           <div class="beginner-path-grid">
-            <div class="bpg-card" onclick="switchSection('academy')">
+            <div class="bpg-card" data-section="academy">
               <div class="bpg-num">01</div>
               <div class="bpg-icon">🎓</div>
               <div class="bpg-title">Learn the Basics</div>
               <div class="bpg-desc">What is trading? How do stocks, crypto & forex work? Start with Lesson 1 — no experience needed.</div>
               <div class="bpg-cta">Start Learning →</div>
             </div>
-            <div class="bpg-card" onclick="switchSection('academy'); setTimeout(()=>setAcademyTrack('technical'),300)">
+            <div class="bpg-card" data-section="academy" data-track="technical">
               <div class="bpg-num">02</div>
               <div class="bpg-icon">📊</div>
               <div class="bpg-title">Learn to Read Charts</div>
               <div class="bpg-desc">Candlesticks, RSI, MACD, support &amp; resistance. See real live charts as you learn.</div>
               <div class="bpg-cta">Open Chart Lessons →</div>
             </div>
-            <div class="bpg-card" onclick="switchSection('papertrading')">
+            <div class="bpg-card" data-section="papertrading">
               <div class="bpg-num">03</div>
               <div class="bpg-icon">🎮</div>
               <div class="bpg-title">Practice Risk-Free</div>
               <div class="bpg-desc">Trade with $10,000 virtual money. Make mistakes here, not with real money. Build confidence first.</div>
               <div class="bpg-cta">Open Paper Trading →</div>
             </div>
-            <div class="bpg-card" onclick="switchSection('screener')">
+            <div class="bpg-card" data-section="screener">
               <div class="bpg-num">04</div>
               <div class="bpg-icon">🔍</div>
               <div class="bpg-title">Find Opportunities</div>
               <div class="bpg-desc">Use the Screener to scan for coins with RSI oversold, buy signals, or volume spikes.</div>
               <div class="bpg-cta">Open Screener →</div>
             </div>
-            <div class="bpg-card" onclick="switchSection('markets')">
+            <div class="bpg-card" data-section="markets">
               <div class="bpg-num">05</div>
               <div class="bpg-icon">📈</div>
               <div class="bpg-title">Analyse &amp; Get Signals</div>
               <div class="bpg-desc">Select any coin. Get Entry, Stop Loss, and Take Profit levels based on technical analysis.</div>
               <div class="bpg-cta">Open Analysis →</div>
             </div>
-            <div class="bpg-card" onclick="switchSection('journal')">
+            <div class="bpg-card" data-section="journal">
               <div class="bpg-num">06</div>
               <div class="bpg-icon">📓</div>
               <div class="bpg-title">Track Your Trades</div>
@@ -526,7 +566,7 @@
           <!-- ══ LIVE CRYPTO MINI-GRID ══ -->
           <div class="sub-section-title">
             <span>🔥 Crypto Prices</span>
-            <button class="btn-small" onclick="switchSection('crypto')">View All →</button>
+            <button class="btn-small" data-section="crypto">View All →</button>
           </div>
           <div id="marketOverview" class="market-grid">
             <div class="loading">Loading market data...</div>
@@ -871,7 +911,7 @@
               </div>
               <div class="form-group form-group-action">
                 <label>&nbsp;</label>
-                <button class="btn-primary" onclick="addHolding()">+ Add</button>
+                <button class="btn-primary" id="addHoldingBtn">+ Add</button>
               </div>
             </div>
           </div>
@@ -902,8 +942,8 @@
             </table>
           </div>
           <div class="portfolio-actions">
-            <button class="btn-secondary" onclick="clearPortfolio()">🗑 Clear All</button>
-            <button class="btn-secondary" onclick="exportPortfolio()">⬇ Export CSV</button>
+            <button class="btn-secondary" id="clearPortfolioBtn">🗑 Clear All</button>
+            <button class="btn-secondary" id="exportPortfolioBtn">⬇ Export CSV</button>
           </div>
         </section>
 
@@ -934,7 +974,7 @@
                   <option value="USDT">USDT – Tether</option>
                 </select>
               </div>
-              <button class="conv-swap" onclick="swapConverter()" title="Swap currencies">⇄</button>
+              <button class="conv-swap" id="convSwapBtn" title="Swap currencies">⇄</button>
               <div class="conv-group">
                 <label>To</label>
                 <select id="convTo" class="conv-select">
@@ -951,7 +991,7 @@
                 </select>
               </div>
             </div>
-            <button class="btn-primary btn-wide" onclick="convertCurrency()">Convert</button>
+            <button class="btn-primary btn-wide" id="convertCurrencyBtn">Convert</button>
             <div class="conv-result" id="convResult"></div>
           </div>
 
@@ -981,29 +1021,29 @@
                 <div class="rc-form-row">
                   <div class="rc-field">
                     <label>Account Balance ($)</label>
-                    <input type="number" id="rcBalance" class="rc-input" placeholder="e.g. 10000" value="10000" oninput="calcStandalonePosition()">
+                    <input type="number" id="rcBalance" class="rc-input" placeholder="e.g. 10000" value="10000">
                   </div>
                   <div class="rc-field">
                     <label>Risk per Trade (%)</label>
-                    <input type="number" id="rcRiskPct" class="rc-input" placeholder="1" value="1" min="0.1" max="10" step="0.1" oninput="calcStandalonePosition()">
+                    <input type="number" id="rcRiskPct" class="rc-input" placeholder="1" value="1" min="0.1" max="10" step="0.1">
                   </div>
                 </div>
                 <div class="rc-form-row">
                   <div class="rc-field">
                     <label>Entry Price</label>
-                    <input type="number" id="rcEntry" class="rc-input" placeholder="e.g. 50000" step="any" oninput="calcStandalonePosition()">
+                    <input type="number" id="rcEntry" class="rc-input" placeholder="e.g. 50000" step="any">
                   </div>
                   <div class="rc-field">
                     <label>Stop Loss Price</label>
-                    <input type="number" id="rcSL" class="rc-input" placeholder="e.g. 48000" step="any" oninput="calcStandalonePosition()">
+                    <input type="number" id="rcSL" class="rc-input" placeholder="e.g. 48000" step="any">
                   </div>
                 </div>
                 <div class="rc-risk-presets">
                   <span class="rc-preset-label">Quick risk:</span>
-                  <button class="rc-preset-btn" onclick="document.getElementById('rcRiskPct').value=0.5;calcStandalonePosition()">0.5%</button>
-                  <button class="rc-preset-btn" onclick="document.getElementById('rcRiskPct').value=1;calcStandalonePosition()">1%</button>
-                  <button class="rc-preset-btn" onclick="document.getElementById('rcRiskPct').value=2;calcStandalonePosition()">2%</button>
-                  <button class="rc-preset-btn" onclick="document.getElementById('rcRiskPct').value=5;calcStandalonePosition()">5%</button>
+                  <button class="rc-preset-btn" data-risk-pct="0.5">0.5%</button>
+                  <button class="rc-preset-btn" data-risk-pct="1">1%</button>
+                  <button class="rc-preset-btn" data-risk-pct="2">2%</button>
+                  <button class="rc-preset-btn" data-risk-pct="5">5%</button>
                 </div>
               </div>
 
@@ -1032,7 +1072,7 @@
                   <label>Take Profit Target</label>
                   <input type="number" id="rrTarget" class="rc-input" placeholder="Take Profit" step="any">
                 </div>
-                <button class="btn-primary" onclick="calculateRR()" style="width:100%">Calculate R:R</button>
+                <button class="btn-primary" id="calculateRRBtn" style="width:100%">Calculate R:R</button>
               </div>
               <div class="calc-result" id="rrResult"></div>
 
@@ -1072,8 +1112,8 @@
               <div class="sh-stat"><div class="sh-stat-val">— / —</div><div class="sh-stat-lbl">Long WR / Short WR</div></div>
             </div>
             <div class="sh-action-btns">
-              <button class="btn-secondary" onclick="exportSignalHistoryCSV()">📥 Export CSV</button>
-              <button class="btn-danger" onclick="clearSignalHistory()">🗑️ Clear All</button>
+              <button class="btn-secondary" id="exportSignalHistoryBtn">📥 Export CSV</button>
+              <button class="btn-danger" id="clearSignalHistoryBtn">🗑️ Clear All</button>
             </div>
           </div>
 
@@ -1123,7 +1163,7 @@
               </div>
               <div class="form-group form-group-action">
                 <label>&nbsp;</label>
-                <button class="btn-primary" onclick="addAlert()">+ Add Alert</button>
+                <button class="btn-primary" id="addAlertBtn">+ Add Alert</button>
               </div>
             </div>
           </div>
@@ -1206,15 +1246,15 @@
                 <label>Price (USD)</label>
                 <div class="price-input-group">
                   <input type="number" id="ptPrice" class="form-input" placeholder="e.g. 65000" step="any" min="0">
-                  <button id="ptFillPrice" class="btn-fill-price" onclick="fillCurrentPrice()">⟳ Current</button>
+                  <button id="ptFillPriceBtn" class="btn-fill-price">⟳ Current</button>
                 </div>
               </div>
             </div>
             <div id="ptMessage" class="pt-message" style="display:none"></div>
             <div class="pt-action-btns">
-              <button class="btn-buy" onclick="executePaperTrade('buy')">📈 Buy</button>
-              <button class="btn-sell" onclick="executePaperTrade('sell')">📉 Sell</button>
-              <button class="btn-secondary" onclick="resetPaperTrading()">🔄 Reset ($10,000)</button>
+              <button class="btn-buy" id="ptBuyBtn">📈 Buy</button>
+              <button class="btn-sell" id="ptSellBtn">📉 Sell</button>
+              <button class="btn-secondary" id="ptResetBtn">🔄 Reset ($10,000)</button>
             </div>
           </div>
 
@@ -1320,9 +1360,9 @@
 
           <!-- Market Tabs -->
           <div class="global-market-tabs">
-            <button class="gm-tab active" data-market="us" onclick="switchGlobalMarket('us', this)">🇺🇸 US Markets</button>
-            <button class="gm-tab" data-market="uk" onclick="switchGlobalMarket('uk', this)">🇬🇧 UK Markets</button>
-            <button class="gm-tab" data-market="screener" onclick="switchGlobalMarket('screener', this)">🔍 Stock Screener</button>
+            <button class="gm-tab active" data-market="us">🇺🇸 US Markets</button>
+            <button class="gm-tab" data-market="uk">🇬🇧 UK Markets</button>
+            <button class="gm-tab" data-market="screener">🔍 Stock Screener</button>
           </div>
 
           <!-- US Markets Panel -->
@@ -1332,7 +1372,7 @@
             </div>
             <div class="sub-section-title" style="margin-top:1.5rem">
               <span>Top US Stocks</span>
-              <input type="text" id="usStockSearch" class="search-input-sm" placeholder="Search stocks…" oninput="filterGlobalStocks('us', this.value)">
+              <input type="text" id="usStockSearch" class="search-input-sm" placeholder="Search stocks…">
             </div>
             <div class="gm-stocks-table-wrap">
               <table class="gm-stocks-table" id="usStocksTable">
@@ -1351,7 +1391,7 @@
             </div>
             <div class="sub-section-title" style="margin-top:1.5rem">
               <span>Top FTSE 100 Stocks</span>
-              <input type="text" id="ukStockSearch" class="search-input-sm" placeholder="Search stocks…" oninput="filterGlobalStocks('uk', this.value)">
+              <input type="text" id="ukStockSearch" class="search-input-sm" placeholder="Search stocks…">
             </div>
             <div class="gm-stocks-table-wrap">
               <table class="gm-stocks-table" id="ukStocksTable">
@@ -1389,7 +1429,7 @@
                   <option value="pe">P/E Ratio</option>
                 </select>
               </label>
-              <button class="btn-primary" onclick="runGlobalScreener()">🔍 Run Screener</button>
+              <button class="btn-primary" id="runGlobalScreenerBtn">🔍 Run Screener</button>
             </div>
             <div id="gmsResults" class="gm-screener-results">
               <div class="gm-screener-hint">Select a market and click Run Screener to scan stocks.</div>
@@ -1615,37 +1655,22 @@
   <script src="js/polymarketIntegration.js?v=1"></script>
   <script src="js/llmTradeEngine.js?v=1"></script>
   <script src="js/cockpit.js?v=2"></script>
+  <script src="js/signalBus.js"></script>
+  <script src="js/commandCenter.js"></script>
+  <script src="js/alertEngine.js"></script>
+  <script src="js/tradeJournal.js"></script>
+  <script src="js/signalActionPanel.js"></script>
+  <script src="js/performanceDashboard.js"></script>
+  <script src="js/tickerStrip.js"></script>
+  <script src="js/backtester.js"></script>
+  <script src="js/portfolioTracker.js"></script>
+  <script src="js/settings.js"></script>
   <script src="js/auth.js?v=1"></script>
   <script src="js/app.js?v=9"></script>
 
   <!-- PWA Service Worker Registration -->
-  <script>
-    if ('serviceWorker' in navigator) {
-      window.addEventListener('load', () => {
-        navigator.serviceWorker.register('/sw.js')
-          .then(reg => console.log('[SW] Registered:', reg.scope))
-          .catch(err => console.log('[SW] Registration failed:', err));
-      });
-    }
-
-    // Handle install prompt
-    let deferredPrompt;
-    window.addEventListener('beforeinstallprompt', (e) => {
-      e.preventDefault();
-      deferredPrompt = e;
-      // Show install button if it exists
-      const installBtn = document.getElementById('pwaInstallBtn');
-      if (installBtn) {
-        installBtn.style.display = 'flex';
-        installBtn.addEventListener('click', () => {
-          deferredPrompt.prompt();
-          deferredPrompt.userChoice.then((result) => {
-            deferredPrompt = null;
-            installBtn.style.display = 'none';
-          });
-        });
-      }
-    });
-  </script>
+  <script src="js/pwa.js"></script>
+  <script src="js/upgradeModal.js"></script>
+  <script src="js/inlineHandlers.js"></script>
 </body>
 </html>

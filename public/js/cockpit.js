@@ -338,6 +338,9 @@ const TradingCockpit = (() => {
 
     setCockpitLoading(false);
     renderCockpit(coin, coinData);
+
+    // Feed all signals into the global bus so Command Center can pick them up
+    if (typeof SignalBus !== 'undefined') SignalBus.seedFromCockpit(coin, coinData);
   }
 
   // ── Render ────────────────────────────────────────────────────────────
