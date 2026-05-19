@@ -13,8 +13,13 @@ const Database = require('better-sqlite3');
 const path = require('path');
 const fs = require('fs');
 
+const IS_VERCEL = process.env.VERCEL === '1';
+const DEFAULT_DB_DIR = IS_VERCEL
+  ? path.join('/tmp', 'traderpro')
+  : path.join(__dirname, '..', 'data');
+
 const DB_PATH = process.env.APP_DB_PATH
-  || path.join(__dirname, '..', 'data', 'app.db');
+  || path.join(DEFAULT_DB_DIR, 'app.db');
 
 const dataDir = path.dirname(DB_PATH);
 if (!fs.existsSync(dataDir)) fs.mkdirSync(dataDir, { recursive: true });

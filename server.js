@@ -31,6 +31,7 @@ const wsFeeds       = require('./services/wsFeeds');
 const { stripeActivatePlan, stripeDeactivatePlan, getUserByStripeCustomer } = require('./services/appDb');
 
 const IS_PROD = process.env.NODE_ENV === 'production';
+const IS_SERVERLESS = process.env.VERCEL === '1';
 
 // Allowed crypto symbols (uppercase, no USDT suffix) — validated on all :symbol routes
 const VALID_SYMBOLS = new Set(
@@ -150,7 +151,7 @@ app.use('/api/admin/users',            adminMutationLimiter);
 app.use(cookieParser());
 app.use(session({
     store: new FileStore({
-        path: path.join(__dirname, 'sessions'),
+        path: IS_SERVERLESS ? path.join('/tmp', 'traderpro-sessions') : path.join(__dirname, 'sessions'),
         ttl: 7 * 24 * 60 * 60,
         reapInterval: 60 * 60,
         logFn: () => {}
@@ -2226,6 +2227,19 @@ app.get('/dashboard', (req, res) => {
     res.sendFile(path.join(__dirname, 'public', 'index.html'));
 });
 
+// REST fallback: latest prices for all watched symbols
+app.get('/api/ws/prices', requireAuth, (req, res) => {
+    res.json({ ok: true, prices: wsFeeds.getAllPrices() });
+});
+
+// Subscribe to an additional symbol at runtime
+app.post('/api/ws/subscribe', requireAuth, (req, res) => {
+    const { base, quote } = req.body || {};
+    if (!base || !quote) return res.status(400).json({ ok: false, error: 'base and quote required' });
+    wsFeeds.subscribe(base.toUpperCase(), quote.toUpperCase());
+    res.json({ ok: true });
+});
+
 // ── 404 & GLOBAL ERROR HANDLER ────────────────────────────────────────
 
 app.use((req, res) => {
@@ -2307,85 +2321,76 @@ async function runAlertCron() {
     }
 }
 
-setInterval(runAlertCron, 60_000);
-setTimeout(runAlertCron, 5_000); // run shortly after boot
-
 // ── START ────────────────────────────────────────────────────────────
 
-const server = app.listen(PORT, () => {
-    console.log(`\n🚀 TraderPro running on http://localhost:${PORT}`);
-    console.log(`   Mode: ${IS_PROD ? '🔒 PRODUCTION' : '🛠  development'}`);
-    console.log(`📊 Crypto: ${config.cryptocurrencies.length} coins`);
-    console.log(`💱 Forex: ${config.forexPairs.length} pairs`);
-    console.log(`🇵🇰 PSX: ${config.psxTopStocks?.length ?? 0} stocks`);
-    console.log(`🏦 Exchanges: 10 curated + CoinGecko live`);
-    console.log(`💰 100% FREE — No paid API keys required!`);
-    console.log(`🔐 Auth: SQLite multi-user authentication enabled`);
-    console.log(`💾 DB: SQLite data persistence + background collector`);
-    console.log(`🌐 Health: http://localhost:${PORT}/health\n`);
+let gracefulShutdown = null;
 
-    // Start background data collection
-    dataCollector.start();
-    // Start auto-signal engine (only runs if admin has enabled it)
-    autoSignalEngine.start();
-    // Start real-time ccxws price feeds
-    wsFeeds.start();
-});
+if (!IS_SERVERLESS) {
+    setInterval(runAlertCron, 60_000);
+    setTimeout(runAlertCron, 5_000); // run shortly after boot
 
-// ── WEBSOCKET /ws — real-time price ticker ────────────────────────────
-// Browser connects via: new WebSocket('ws://host/ws')
-const { WebSocketServer } = require('ws');
-const wss = new WebSocketServer({ noServer: true });
+    const server = app.listen(PORT, () => {
+        console.log(`\n🚀 TraderPro running on http://localhost:${PORT}`);
+        console.log(`   Mode: ${IS_PROD ? '🔒 PRODUCTION' : '🛠  development'}`);
+        console.log(`📊 Crypto: ${config.cryptocurrencies.length} coins`);
+        console.log(`💱 Forex: ${config.forexPairs.length} pairs`);
+        console.log(`🇵🇰 PSX: ${config.psxTopStocks?.length ?? 0} stocks`);
+        console.log(`🏦 Exchanges: 10 curated + CoinGecko live`);
+        console.log(`💰 100% FREE — No paid API keys required!`);
+        console.log(`🔐 Auth: SQLite multi-user authentication enabled`);
+        console.log(`💾 DB: SQLite data persistence + background collector`);
+        console.log(`🌐 Health: http://localhost:${PORT}/health\n`);
 
-wss.on('connection', ws => {
-    wsFeeds.addClient(ws);
-});
-
-server.on('upgrade', (req, socket, head) => {
-    if (req.url === '/ws') {
-        wss.handleUpgrade(req, socket, head, ws => wss.emit('connection', ws, req));
-    } else {
-        socket.destroy();
-    }
-});
-
-// REST fallback: latest prices for all watched symbols
-app.get('/api/ws/prices', requireAuth, (req, res) => {
-    res.json({ ok: true, prices: wsFeeds.getAllPrices() });
-});
-
-// Subscribe to an additional symbol at runtime
-app.post('/api/ws/subscribe', requireAuth, (req, res) => {
-    const { base, quote } = req.body || {};
-    if (!base || !quote) return res.status(400).json({ ok: false, error: 'base and quote required' });
-    wsFeeds.subscribe(base.toUpperCase(), quote.toUpperCase());
-    res.json({ ok: true });
-});
-
-// ── GRACEFUL SHUTDOWN ─────────────────────────────────────────────────
-
-function gracefulShutdown(signal) {
-    console.log(`\n[${signal}] Graceful shutdown initiated...`);
-    dataCollector.stop();
-    autoSignalEngine.stop();
-    wsFeeds.stop();
-    server.close(() => {
-        console.log('HTTP server closed. Bye!\n');
-        process.exit(0);
+        // Start background data collection
+        dataCollector.start();
+        // Start auto-signal engine (only runs if admin has enabled it)
+        autoSignalEngine.start();
+        // Start real-time ccxws price feeds
+        wsFeeds.start();
     });
-    // Force exit after 10 s if connections hang
-    setTimeout(() => {
-        console.error('Forced shutdown after timeout.');
-        process.exit(1);
-    }, 10000);
-}
 
-process.on('SIGTERM', () => gracefulShutdown('SIGTERM'));
-process.on('SIGINT',  () => gracefulShutdown('SIGINT'));
+    // ── WEBSOCKET /ws — real-time price ticker ────────────────────────────
+    // Browser connects via: new WebSocket('ws://host/ws')
+    const { WebSocketServer } = require('ws');
+    const wss = new WebSocketServer({ noServer: true });
+
+    wss.on('connection', ws => {
+        wsFeeds.addClient(ws);
+    });
+
+    server.on('upgrade', (req, socket, head) => {
+        if (req.url === '/ws') {
+            wss.handleUpgrade(req, socket, head, ws => wss.emit('connection', ws, req));
+        } else {
+            socket.destroy();
+        }
+    });
+
+    // ── GRACEFUL SHUTDOWN ─────────────────────────────────────────────────
+
+    gracefulShutdown = function(signal) {
+        console.log(`\n[${signal}] Graceful shutdown initiated...`);
+        dataCollector.stop();
+        autoSignalEngine.stop();
+        wsFeeds.stop();
+        server.close(() => {
+            console.log('HTTP server closed. Bye!\n');
+            process.exit(0);
+        });
+        // Force exit after 10 s if connections hang
+        setTimeout(() => {
+            console.error('Forced shutdown after timeout.');
+            process.exit(1);
+        }, 10000);
+    };
+
+    process.on('SIGTERM', () => gracefulShutdown('SIGTERM'));
+    process.on('SIGINT',  () => gracefulShutdown('SIGINT'));
+}
 
 process.on('uncaughtException', (err) => {
     console.error('[uncaughtException]', err);
-    if (IS_PROD) gracefulShutdown('uncaughtException');
+    if (IS_PROD && gracefulShutdown) gracefulShutdown('uncaughtException');
 });
 
 process.on('unhandledRejection', (reason) => {
